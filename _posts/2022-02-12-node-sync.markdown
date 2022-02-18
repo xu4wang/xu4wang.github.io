@@ -1,0 +1,183 @@
+---
+layout:     post
+title:      "异步Javascript"
+subtitle:   "关于 callback, promise, await, asyc, libuv, epoll等"
+date:       2022-01-12
+author:     "awis.me"
+header-img: "img/engine_lite.jpg"
+tags:
+    - JavaScript
+    - Node
+---
+
+> 通过学习：
+> - Javascript语言定义的 callback, promise, await, asyc 
+> - javascript/NodeJS 引擎（libuv）
+> - 操作系统IO多路复用（epoll）.  
+> 
+> 来了解 javascript 异步函数的运行和实现机制，方便阅读和调试Javascript代码。
+
+## 1. 简介
+
+对于习惯了线程池/多进程/消息队列的程序员，使用Javascript/NodeJS，有几个概念需要了解。
+
+- Callbacks, Promises, Async Await
+- IO多路复用和异步访问
+
+## 2. Callbacks, Promises, Async Await
+
+Youtube有个视频[Async JS Crash Course - Callbacks, Promises, Async Await](https://www.youtube.com/watch?v=PoRJizFvM7s&list=PLz-wA1QEiaA4bqejYQGjfhHhqc21CYV0w&index=4), 用24分钟把这几个概念演示的很清楚。
+
+Callback是最基本的，但是Callback有一个问题，在写异步函数的时候，需要把callbank函数作为参数传进去。 如果这个函数本身是个异步函数，它也有一个callback函数作为参数。如果层数很多，就产生了callback hell。 函数可读性很差。
+
+为了解决这个问题， Promise引入了一层封装， 在定义异步函数时候不需要指明callback函数了。 可以在Promise定义后再：
+- 通过then来定义执行成功后的回调
+- 通过catch定义执行异常情况下的回调
+
+Async Await是对Promise的进一步封装。让异步函数看起来象同步函数（不再需要Promose里面的then来显式定义回调）。
+
+下面抄自[google官方文档](https://developers.google.com/web/fundamentals/primers/async-functions)
+
+```javascript
+async function myFirstAsyncFunction() {
+  try {
+    const fulfilledValue = await promise;
+  }
+  catch (rejectedValue) {
+    // …
+  }
+}
+```
+
+> 如果在函数定义之前使用了 async 关键字，就可以在函数内使用 await。 当您 await 某个 Promise 时，函数暂停执行，直至该 Promise 产生结果，并且暂停并不会阻塞主线程。 如果 Promise 执行，则会返回值。 如果 Promise 拒绝，则会抛出拒绝的值。
+
+
+Javascript程序在执行时候， 先逐行同步执行每一条语句。 当碰到callback时候，把该callback放入队列中，继续执行下一条语句,所有语句执行完之后，再看队列里面有哪些callback具备执行条件了，一一执行。参见后面的NodeJS Event Loop。
+
+```javascript
+doA(function() {
+  
+  doB();
+  
+  doC(function() {
+    doD();
+  });
+  
+  doE();
+});
+
+doF();
+```
+
+以上执行顺序是：A，F，B，C，E，D。 以上ABCDEF都没有外部事件的依赖，当函数是某一个异步函数的callback时候，其是否执行还取决于该callback对应的事件是不是发生了。
+
+例如：
+
+```html
+<p id="content"> 请等三秒钟!</p>  
+<script>  
+setTimeout("changeState()",3000 );  
+function changeState(){  
+    let content=document.getElementById('content');  
+    content.innerHTML="<div style='color:red'>我是三秒后显示的内容！</div>";  
+}  
+</script>
+```
+
+上面changeState在时间到了后才会执行。参见后面event loop中的Timers部分描述。
+
+以上Callback是通过setTimeout函数来配置的。setTimeout是JS引擎本身的异步函数。调用它后会立即返回，但传入的callback会在特定事件发生时候被回调。
+
+一个JS程序中会有各种各样的回调函数，通过JS提供的定时器或者网络/文件访问函数来生效。 JS内部的回调函数实现用到了IO多路复用和异步访问机制。
+
+## 3. IO多路复用和异步访问
+
+IO多路复用（事件驱动IO）不是Javascript/NodeJS的独创， 是一种通用的IO访问模式。高性能的web服务器大多数采用这种模式（例如nginx）。 
+
+Javascript以IO异步访问出名，原因是它只支持这种IO方式。强迫程序员用这种不是那么友好，但在IO密集型应用中性能好的设计模式。 
+
+Python也支持异步IO方式，但由于历史原因，大多数应用采用多进程/多线程方式，在进程内部同步处理IO。
+
+libevent，libev，libuv 都是开发IO多路复用应用的第三方库，其主要功能是屏蔽不同操作系统API的差异，给应用提供统一接口。
+
+libevent/libev/libuv 等在网络服务器应用上，能支撑大的并发连接数。原因在于它可以在有限的内存消耗下，把对成千上万个IO的状态扫描工作交给操作系统完成。 对于新的网络请求：
+- 不需要新的进程/线程进行处理，减少资源消耗
+- 不需要应用层增加异步轮询的处理时间，epoll_ctl 告诉OS就OK了。
+
+浏览器中的JS和后端的NodeJS都有异步机制。 其本质都是在操作系统的进程中（Chrome进程或者NodeJS进程）访问操作系统提供的异步IO API来实现。 以下以NodeJS为主要分析对象。
+
+NodeJS使用libuv来实现IO多路复用和异步IO。 libuv本来是NodeJS项目的产物，由于比较成功，也被其它项目使用了，例如Python生态环境的web framework [Fastapi](https://fastapi.tiangolo.com/)也使用了libuv。
+
+
+> 备注
+> 
+> [《UNP: Unix Network Programming》](https://www.4e00.com/blog/linux/2017/09/29/unix-network-programming-charpter-6-io-multiplexing.html) 中把访问IO的方式分成了5种：
+> - blocking I/O
+> - nonblocking I/O
+> - I/O multiplexing (select and poll)
+> - signal driven I/O (SIGIO)
+> - asynchronous I/O (the POSIX aio_ functions)
+> 
+> 其中第三类，libuv用的epoll就是在select/poll基础上发展出来的增强版poll。
+> 
+> UNP中的第五类也叫异步IO，特指由操作系统负责IO数据读写，应用不关心读写，只关心读写完成事件（类似DMA）。 
+> 
+> 这点和Javascript中的异步IO有区别。Javascript中的异步IO更精确说是指的IO多路复用下的非阻塞IO。
+
+### 3.1. NodeJS的event loop
+
+![picture 2](/img/1645089866698.png)  
+
+- timers: this phase executes callbacks scheduled by setTimeout() and setInterval().
+- pending callbacks: executes I/O callbacks deferred to the next loop iteration.
+- idle, prepare: only used internally.
+- poll: retrieve new I/O events; execute I/O related callbacks (almost all with the exception of close callbacks, the ones scheduled by timers, and setImmediate()); node will block here when appropriate.
+- check: setImmediate() callbacks are invoked here.
+- close callbacks: some close callbacks, e.g. socket.on('close', ...).
+
+[NodeJS官方文档](https://NodeJS.org/uk/docs/guides/event-loop-timers-and-nexttick/#event-loop-explained)中可以看到，event loop里面，主线程在不断的poll（在linux下就是通过libuv调用epoll_wait，来查看有哪些事件发生了。然后调用对应的用户注册的各种callback。
+
+### 3.2. libuv
+
+[文档中对libuv有如下介绍](https://NodeJS.org/en/docs/meta/topics/dependencies/#libuv)：
+
+> Another important dependency is libuv, a C library that is used to abstract non-blocking I/O operations to a consistent interface across all supported platforms. It provides mechanisms to handle file system, DNS, network, child processes, pipes, signal handling, polling and streaming. It also includes a thread pool for offloading work for some things that can't be done asynchronously at the operating system level.
+
+![picture 1](/img/1645089061542.png)  
+可见在[libuv](http://docs.libuv.org/en/v1.x/design.html)中：
+- 网络IO：使用操作系统提供的异步IO实现。
+- 文件读写等：使用线程池封装出异步事件接口。
+
+### 3.3. 网络IO中的OS调用
+
+对于网络数据收发， libuv针对不同操作系统做了封装。在linux下使用异步IO API epoll，epoll提供三个API：
+
+```c
+int epoll_create(int size);
+int epoll_ctl(int epfd, int op, int fd, struct epoll_event *event);
+int epoll_wait(int epfd, struct epoll_event *events, int maxevents, int timeout);
+```
+
+应用程序通过epoll_ctl来配置需要听哪些事件，通过epoll_wait来查询当前时间有哪些感兴趣的事件已经发生了。 
+
+> 注意：
+>
+> * epoll_ctl 可配置的事件有文件描述符可读，可写等。
+> * epoll_wait 不一定会阻塞，timeout参数可以使用一个很短的时间，达到查一下事件然后立即返回的目的。 NodeJS就是这样的。如果一直wait，event loop就转不起来了。
+
+## 4. 总结
+
+Javascript使用异步方式访问IO，为了程序的可读性，在callback的基础上做了若干封装。 Async Await看起来已经和同步函数很相近了。
+
+Javascript的异步事件，是由操作系统底层支持的。事件的产生由操作系统底层触发，由Javascript内部事件循环来读取事件，并调用相应的事件处理Callback。
+
+Javascript代码没办法自主生成事件。 Javascript的异步函数是对引擎API中的异步函数的进一步封装。
+
+
+
+
+
+
+
+
+
