@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "异步Javascript"
+title:      "Javascript的异步执行机制"
 subtitle:   "关于 callback, promise, await, asyc, libuv, epoll等"
 date:       2022-01-12
 author:     "awis.me"
@@ -10,12 +10,12 @@ tags:
     - Node
 ---
 
-> 通过学习：
+> 回顾：
 > - Javascript语言定义的 callback, promise, await, asyc 
 > - javascript/NodeJS 引擎（libuv）
 > - 操作系统IO多路复用（epoll）.  
 > 
-> 来了解 javascript 异步函数的运行和实现机制，方便阅读和调试Javascript代码。
+> 了解 javascript 异步函数的运行和实现机制，方便阅读和调试Javascript代码。
 
 ## 1. 简介
 
@@ -171,7 +171,7 @@ Javascript使用异步方式访问IO，为了程序的可读性，在callback的
 
 Javascript的异步事件，是由操作系统底层支持的。事件的产生由操作系统底层触发，由Javascript内部事件循环来读取事件，并调用相应的事件处理Callback。
 
-Javascript代码没办法自主生成事件。 Javascript的异步函数是对引擎API中的异步函数的进一步封装。
+Javascript代码没办法自主生成事件。 Javascript的异步函数是对引擎API中需要的callback的实现，以及对引擎API的进一步封装。
 
 
 
