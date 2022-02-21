@@ -1,3 +1,17 @@
+
+# Introduction
+
+这个是我的博客。 使用GitHub Pages来Host。 博客中所有的文章，图片在这个库里面都可以看到。
+最初，我打算使用 mmistakes 模版，所以用mmistakes的generator生成了这个库。你在左上角可以看到
+
+```
+generated from mmistakes/mm-github-pages-starter
+```
+
+后来发现 https://github.com/Huxpro/huxpro.github.io 对中英文混合排版的支持更好。所以就切换到了huxpro模版。
+
+去掉了原huxpro库中google ads相关的内容。 
+
 # TODO Site
 
 - [x] 找三张窄一点的图片 Home，Tags，About
@@ -8,7 +22,7 @@
 - [x] 右侧提纲展示 
 - [x] 微信公众号文章里面的查看原文？ 发表时候可以放原文链接。
 - [x] 网站上线
-- [ ] google-site-verification 配置
+- [x] 去掉google ads
 - [ ] baidu 统计配置
 # TODO Notes
 
