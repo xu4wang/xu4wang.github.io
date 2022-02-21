@@ -1,8 +1,8 @@
 ---
 layout:     post
-title:      "Javascript的异步执行机制"
+title:      "JavaScript的异步执行机制"
 subtitle:   "关于 callback, promise, await, asyc, libuv, epoll等"
-date:       2022-01-12
+date:       2022-02-12
 author:     "awis.me"
 header-img: "img/engine_lite.jpg"
 tags:
@@ -11,15 +11,15 @@ tags:
 ---
 
 > 回顾：
-> - Javascript语言定义的 callback, promise, await, asyc 
-> - javascript/NodeJS 引擎（libuv）
+> - JavaScript语言定义的 callback, promise, await, asyc 
+> - JavaScript/NodeJS 引擎（libuv）
 > - 操作系统IO多路复用（epoll）.  
 > 
-> 了解 javascript 异步函数的运行和实现机制，方便阅读和调试Javascript代码。
+> 了解 JavaScript 异步函数的运行和实现机制，方便阅读和调试JavaScript代码。
 
 ## 1. 简介
 
-对于习惯了线程池/多进程/消息队列的程序员，使用Javascript/NodeJS，有几个概念需要了解。
+对于习惯了线程池/多进程/消息队列的程序员，使用JavaScript/NodeJS，有几个概念需要了解。
 
 - Callbacks, Promises, Async Await
 - IO多路复用和异步访问
@@ -38,7 +38,7 @@ Async Await是对Promise的进一步封装。让异步函数看起来象同步�
 
 下面抄自[google官方文档](https://developers.google.com/web/fundamentals/primers/async-functions)
 
-```javascript
+```JavaScript
 async function myFirstAsyncFunction() {
   try {
     const fulfilledValue = await promise;
@@ -52,9 +52,9 @@ async function myFirstAsyncFunction() {
 > 如果在函数定义之前使用了 async 关键字，就可以在函数内使用 await。 当您 await 某个 Promise 时，函数暂停执行，直至该 Promise 产生结果，并且暂停并不会阻塞主线程。 如果 Promise 执行，则会返回值。 如果 Promise 拒绝，则会抛出拒绝的值。
 
 
-Javascript程序在执行时候， 先逐行同步执行每一条语句。 当碰到callback时候，把该callback放入队列中，继续执行下一条语句,所有语句执行完之后，再看队列里面有哪些callback具备执行条件了，一一执行。参见后面的NodeJS Event Loop。
+JavaScript程序在执行时候， 先逐行同步执行每一条语句。 当碰到callback时候，把该callback放入队列中，继续执行下一条语句,所有语句执行完之后，再看队列里面有哪些callback具备执行条件了，一一执行。参见后面的NodeJS Event Loop。
 
-```javascript
+```JavaScript
 doA(function() {
   
   doB();
@@ -92,9 +92,9 @@ function changeState(){
 
 ## 3. IO多路复用和异步访问
 
-IO多路复用（事件驱动IO）不是Javascript/NodeJS的独创， 是一种通用的IO访问模式。高性能的web服务器大多数采用这种模式（例如nginx）。 
+IO多路复用（事件驱动IO）不是JavaScript/NodeJS的独创， 是一种通用的IO访问模式。高性能的web服务器大多数采用这种模式（例如nginx）。 
 
-Javascript以IO异步访问出名，原因是它只支持这种IO方式。强迫程序员用这种不是那么友好，但在IO密集型应用中性能好的设计模式。 
+JavaScript以IO异步访问出名，原因是它只支持这种IO方式。强迫程序员用这种不是那么友好，但在IO密集型应用中性能好的设计模式。 
 
 Python也支持异步IO方式，但由于历史原因，大多数应用采用多进程/多线程方式，在进程内部同步处理IO。
 
@@ -122,7 +122,7 @@ NodeJS使用libuv来实现IO多路复用和异步IO。 libuv本来是NodeJS项�
 > 
 > UNP中的第五类也叫异步IO，特指由操作系统负责IO数据读写，应用不关心读写，只关心读写完成事件（类似DMA）。 
 > 
-> 这点和Javascript中的异步IO有区别。Javascript中的异步IO更精确说是指的IO多路复用下的非阻塞IO。
+> 这点和JavaScript中的异步IO有区别。JavaScript中的异步IO更精确说是指的IO多路复用下的非阻塞IO。
 
 ### 3.1. NodeJS的event loop
 
@@ -167,11 +167,11 @@ int epoll_wait(int epfd, struct epoll_event *events, int maxevents, int timeout)
 
 ## 4. 总结
 
-Javascript使用异步方式访问IO，为了程序的可读性，在callback的基础上做了若干封装。 Async Await看起来已经和同步函数很相近了。
+JavaScript使用异步方式访问IO，为了程序的可读性，在callback的基础上做了若干封装。 Async Await看起来已经和同步函数很相近了。
 
-Javascript的异步事件，是由操作系统底层支持的。事件的产生由操作系统底层触发，由Javascript内部事件循环来读取事件，并调用相应的事件处理Callback。
+JavaScript的异步事件，是由操作系统底层支持的。事件的产生由操作系统底层触发，由JavaScript内部事件循环来读取事件，并调用相应的事件处理Callback。
 
-Javascript代码没办法自主生成事件。 Javascript的异步函数是对引擎API中需要的callback的实现，以及对引擎API的进一步封装。
+JavaScript代码没办法自主生成事件。 JavaScript的异步函数是对引擎API中需要的callback的实现，以及对引擎API的进一步封装。
 
 
 

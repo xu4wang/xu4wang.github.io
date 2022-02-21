@@ -100,9 +100,9 @@ page-mathjax: false
 
 
 # Friends
-friends: [
-    {
-        title: "awis",
-        href: "http://xu4wang.github.io/"
-    }
-]
+#friends: [
+#    {
+#        title: "awis",
+#        href: "http://xu4wang.github.io/"
+#    }
+#]

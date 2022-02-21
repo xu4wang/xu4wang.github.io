@@ -2,7 +2,7 @@
 layout:     post
 title:      "Leo editor在python下的开发即将结束"
 subtitle:   "Leo's python development is nearing its end"
-date:       2022-01-19
+date:       2022-02-19
 author:     "awis.me"
 header-img: "img/leo.jpg"
 tags:
@@ -52,7 +52,7 @@ Leo有一个特性让人印象深刻。 它可以给知识做视图（View）。
 
 这样随时可以按照场景， 按照项目，来给知识建立多种展现方式。
 
-对于一段时间内需要集中处理的工作，可以很方便的建一个试图，把需要关注的节点都克隆进去。 工作结束后把视图节点删除就可以了。 工作成果已经反应在系统中其它节点里面了。
+对于一段时间内需要集中处理的工作，可以很方便的建一个试图，把需要关注的节点都克隆进去。 工作结束后把视图节点删除就可以了。 工作成果已经反映在系统中其它节点里面了。
 
 Leo内部是使用有向无环图(directed acyclic graph)的数据结构来存储节点，支持克隆操作。
 
