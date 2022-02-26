@@ -28,6 +28,7 @@ generated from mmistakes/mm-github-pages-starter
 
 - [x] Javascript 异步
 - [x] leo stop dev
+- [ ] unittest
 - [ ] Directus 安装以及API服务
 - [ ] Directus 多语言
 - [ ] Directus SaaS应用

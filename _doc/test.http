@@ -1,0 +1,59 @@
+
+AgentId
+1477095418
+
+AppKey
+dingbqzziyynpbmpgtxt
+
+AppSecret
+c6rCTM1nmIm-JOTrZtG_1XnPG6lCghoJd6xQdZAMgIkgUySmouRcFZh4ohKlq5oz
+
+###
+
+https://login.dingtalk.com/oauth2/auth?
+redirect_uri=https%3A%2F%2Fwww.baidu.com%2F&response_type=code&client_id=dingbqzziyynpbmpgtxt&scope=openid&prompt=consent&corpId=ding7f4c10f35c0d0f7c35c2f4657eb6378f
+
+###
+
+得到
+
+https://www.baidu.com/?authCode=6b427e8bfab83e93bedd13f16a430702
+
+
+###
+
+POST https://api.dingtalk.com/v1.0/oauth2/userAccessToken 
+Content-Type:application/json
+
+{
+  "clientId" : "dingbqzziyynpbmpgtxt",
+  "clientSecret" : "c6rCTM1nmIm-JOTrZtG_1XnPG6lCghoJd6xQdZAMgIkgUySmouRcFZh4ohKlq5oz",
+  "code" : "6b427e8bfab83e93bedd13f16a430702",
+  "grantType" : "authorization_code"
+}
+
+得到：
+
+{
+  "expireIn": 7200,
+  "accessToken": "a8f4e3215a703ce9a7164e91dbab53c0",
+  "refreshToken": "b13e5a61b421342d95d86c9e64c275c6"
+}
+
+
+### 
+
+GET https://api.dingtalk.com/v1.0/contact/users/me 
+x-acs-dingtalk-access-token:a8f4e3215a703ce9a7164e91dbab53c0
+Content-Type:application/json
+
+
+{
+  "nick": "Austin Wang",
+  "unionId": "D578iS5ho4okiE",
+  "avatarUrl": "https://static-legacy.dingtalk.com/media/lADPGT5i9m5ZyXDNA4LNAtA_720_898.jpg",
+  "openId": "WySPOpXq1XUiE",
+  "mobile": "13501234105",
+  "stateCode": "86",
+  "email": "austin.wangxu@ksher.com"
+}

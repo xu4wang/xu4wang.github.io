@@ -10,6 +10,7 @@ tags:
     - Python
     - JavaScript
     - VS Code
+    - Open Source
 ---
 
 ## Leo 要停止开发了

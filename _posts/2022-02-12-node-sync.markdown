@@ -143,7 +143,7 @@ NodeJS使用libuv来实现IO多路复用和异步IO。 libuv本来是NodeJS项�
 
 > Another important dependency is libuv, a C library that is used to abstract non-blocking I/O operations to a consistent interface across all supported platforms. It provides mechanisms to handle file system, DNS, network, child processes, pipes, signal handling, polling and streaming. It also includes a thread pool for offloading work for some things that can't be done asynchronously at the operating system level.
 
-![picture 1](/img/1645089061542.png)  
+![picture 1](/img/1645089061542.jpg)  
 可见在[libuv](http://docs.libuv.org/en/v1.x/design.html)中：
 - 网络IO：使用操作系统提供的异步IO实现。
 - 文件读写等：使用线程池封装出异步事件接口。

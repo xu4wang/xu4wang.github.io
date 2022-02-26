@@ -1,0 +1,205 @@
+---
+layout:     post
+title:      "OAUTH2 协议示例：使用GitHub和钉钉"
+subtitle:   "OAUTH2 Illustrated using GitHub and Dingtalk"
+date:       2022-02-26
+author:     "awis.me"
+header-img: "img/grass.jpg"
+tags:
+    - Open Source
+    - GitHub
+    - OAuth
+---
+
+## 1. 原理简介
+
+假设有一个APP，要我使用GitHub授权登录。 在这个登录场景中：
+
+我作为数据的所有者告诉系统（GitHub），同意授权第三方应用（App）进入系统，获取某些数据（我的ID，头像等）。系统从而产生一个短期的进入令牌（token），用来代替密码，供第三方应用（APP）访问数据使用。
+
+token是短期有效的，我可以随时通过GitHub把这个Token注销，从而使得APP不再能访问我的ID/头像等信息。
+
+以下分别使用GitHub和钉钉作为OAuth服务器，来展示获取code，获取token以及读取用户信息过程中的消息格式。不需要写代码。需要用浏览器和REST Client（POST MAN， CURL或者Vscode的插件都可以）。
+
+## 2. GitHub OAuth交互示例
+
+![picture 2](/img/1645812498735.jpg)  
+
+上面流程图最后一步是访问GitHub中的库，在登录的场景，这个会是读取用户信息。
+授权码通过前端传送，令牌则是储存在后端，而且所有与资源服务器的通信都在后端完成。这样的前后端分离，可以避免令牌泄漏。
+
+以下四个步骤，示例在GitHub建立了一个新的OAuth应用，获取授权吗，获取token，获取用户数据。 记录了每一步的关键输入输出参数。
+
+### 2.1. 创建OAuth APP
+
+登录GitHub后，在开发选项中建立一个新的OAuth APP，为测试方便，我将Redirect URL设置成了 https://www.baidu.com/. 得到的新APP配置信息是：
+
+```
+client_id : 7ece5cc78e4fdd3260ae
+client_secret: 592f6f0f19e21cd706d6bf4c4dcf6fe9a0ad099c
+```
+
+### 2.2. 获取code
+
+在浏览器发起：
+```
+https://github.com/login/oauth/authorize?client_id=7ece5cc78e4fdd3260ae&redirect_uri=https://www.baidu.com/
+```
+
+出现：
+![picture 3](/img/1645815529546.jpg)  
+
+
+选择授权后，在回调中可以看到Code
+```
+https://www.baidu.com/?code=871f74a9d129ef198b43
+```
+
+### 2.3. 获取token
+
+```
+post https://github.com/login/oauth/access_token?client_id=7ece5cc78e4fdd3260ae&client_secret=592f6f0f19e21cd706d6bf4c4dcf6fe9a0ad099c&code=871f74a9d129ef198b43
+```
+
+上面请求有三个参数：
+- client_id  : 在GitHub创建应用得到的
+- client_secret : 在GitHub创建应用得到的
+- code : 上一步Authorization得到的
+  
+得到响应中：
+```
+access_token=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&scope=&token_type=bearer
+```
+
+这时候登录GitHub在创建的应用配置界面，能够看到已经有一个该应用已经有一个用户了。 并且我可以Revoke All user tokens。
+
+### 2.4. 读取用户信息
+
+```
+get https://api.github.com/user
+accept: 'application/json'
+Authorization: token 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
+```
+
+得到响应中
+
+```json
+{
+  "login": "xu4wang",
+  "id": 311397,
+  "node_id": "MDQ6VXNlcjMxMTM5Nw==",
+  "avatar_url": "https://avatars.githubusercontent.com/u/311397?v=4",
+  "gravatar_id": "",
+  "url": "https://api.github.com/users/xu4wang",
+  "html_url": "https://github.com/xu4wang",
+  "followers_url": "https://api.github.com/users/xu4wang/followers",
+  "following_url": "https://api.github.com/users/xu4wang/following{/other_user}",
+  "gists_url": "https://api.github.com/users/xu4wang/gists{/gist_id}",
+  "starred_url": "https://api.github.com/users/xu4wang/starred{/owner}{/repo}",
+  "subscriptions_url": "https://api.github.com/users/xu4wang/subscriptions",
+  "organizations_url": "https://api.github.com/users/xu4wang/orgs",
+  "repos_url": "https://api.github.com/users/xu4wang/repos",
+  "events_url": "https://api.github.com/users/xu4wang/events{/privacy}",
+  "received_events_url": "https://api.github.com/users/xu4wang/received_events",
+  "type": "User",
+  "site_admin": false,
+  "name": "Austin",
+  "company": null,
+  "blog": "https://awis.me",
+  "location": "Shenzhen, China",
+  "email": "xu4wang@gmail.com",
+  "hireable": null,
+  "bio": "Working @ Bangkok , Beijing and Shenzhen",
+  "twitter_username": null,
+  "public_repos": 26,
+  "public_gists": 1,
+  "followers": 10,
+  "following": 17,
+  "created_at": "2010-06-22T05:35:32Z",
+  "updated_at": "2022-02-25T18:51:48Z"
+}
+```
+
+从上面的流程可以看出， Authorization Request
+是在浏览器和GitHub之间进行的，得到Access Token（授权码）是GitHub Redirect过来的，浏览器会拿到。
+但是申请Token可以在后台和GitHub之间。 这样最终得到的Token不会在前端出现。 
+
+注意： 因为Client Secret只在后台保存，所以前端即便得到Access Token，也没办法自己调用API来从GitHub得到Token。
+前端用client id请求到了该应用可以用的access code, 后端再用client secret和access code一起申请token。 
+通过两步申请的设计，做到了token不暴露给前端，增强了安全性。
+
+## 3. 钉钉 OAuth交互示例
+
+在钉钉上尝试了下，除了需要配置两个读取个人信息的权限外，流程和GitHub类似。
+
+### 3.1. 创建OAuth APP
+
+在钉钉开发者中心，创建H5企业内部应用。并且授权它有读取个人手机号，个人通讯录信息的权限。
+
+### 3.2. 获取code
+
+```
+
+https://login.dingtalk.com/oauth2/auth?
+redirect_uri=https%3A%2F%2Fwww.baidu.com%2F&response_type=code&client_id=dingyourclientid&scope=openid&prompt=consent
+
+得到
+
+https://www.baidu.com/?authCode=6b427e8bfab83e93bedd13f16a430702
+
+```
+
+钉钉在获取code时候，可以有一个corpId参数，用来指定是那个组织的用户。
+
+
+### 3.3. 获取token
+
+```json
+POST https://api.dingtalk.com/v1.0/oauth2/userAccessToken 
+Content-Type:application/json
+
+{
+  "clientId" : "ding your id",
+  "clientSecret" : "your secret",
+  "code" : "6b427e8bfab83e93bedd13f16a430702",
+  "grantType" : "authorization_code"
+}
+
+得到：
+
+{
+  "expireIn": 7200,
+  "accessToken": "a8f4e3215a703ce9a7164e91dbab53c0",
+  "refreshToken": "b13e5a61b421342d95d86c9e64c275c6"
+}
+```
+
+### 3.4. 读取用户信息
+
+```json
+GET https://api.dingtalk.com/v1.0/contact/users/me 
+x-acs-dingtalk-access-token:a8f4e3215a703ce9a7164e91dbab53c0
+Content-Type:application/json
+
+得到：
+
+{
+  "nick": "AWIS ME",
+  "unionId": "D578iS5hxxxx",
+  "avatarUrl": "https://static-legacy.dingtalk.com/media/lADPGT5i9m5ZyXDNA4LNAtA_720.jpg",
+  "openId": "WySPOpXqxE",
+  "mobile": "1350xxxxxxxx",
+  "stateCode": "86",
+  "email": "xxxu@xxx.com"
+}
+
+```
+
+
+## 4. 参考
+
+- http://www.ruanyifeng.com/blog/2019/04/oauth_design.html
+- https://datatracker.ietf.org/doc/html/rfc6749
+- https://open.dingtalk.com/document/orgapp-server/tutorial-obtaining-user-personal-information
+
+
