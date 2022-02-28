@@ -1,7 +1,7 @@
 ---
 layout:     post
-title:      "OAUTH2 协议示例：使用GitHub和钉钉"
-subtitle:   "OAUTH2 Illustrated using GitHub and Dingtalk"
+title:      "OAuth2 协议解析：以GitHub和钉钉为例"
+subtitle:   "OAuth2 Protocol Illustrated: GitHub and Dingtalk"
 date:       2022-02-26
 author:     "awis.me"
 header-img: "img/grass.jpg"
@@ -9,9 +9,10 @@ tags:
     - Open Source
     - GitHub
     - OAuth
+    - 钉钉
 ---
 
-## 1. 原理简介
+## 1. 原理
 
 假设有一个APP，要我使用GitHub授权登录。 在这个登录场景中：
 
@@ -19,16 +20,64 @@ tags:
 
 token是短期有效的，我可以随时通过GitHub把这个Token注销，从而使得APP不再能访问我的ID/头像等信息。
 
-以下分别使用GitHub和钉钉作为OAuth服务器，来展示获取code，获取token以及读取用户信息过程中的消息格式。不需要写代码。需要用浏览器和REST Client（POST MAN， CURL或者Vscode的插件都可以）。
+这里面有三个角色：
+- 应用
+- 系统
+- 用户
 
-## 2. GitHub OAuth交互示例
+应用是资源的使用者，系统是资源提供者，用户是资源所有者。 
+现实生活中， 应用和系统各自有一个实例， 用户有多个实例。 应用和系统之间通过OAuth2协议通信。 用户在通信过程中参与（授权）。
 
-![picture 2](/img/1645812498735.jpg)  
 
-上面流程图最后一步是访问GitHub中的库，在登录的场景，这个会是读取用户信息。
-授权码通过前端传送，令牌则是储存在后端，而且所有与资源服务器的通信都在后端完成。这样的前后端分离，可以避免令牌泄漏。
+按照参考资料1中的比喻， 应用是快递公司，系统是小区，用户是小区业主。 OAuth2的过程是业主授权快递公司在一定的时间内可以报口令自由出入小区。每个快递员在进入小区时候，小区会在对应的业主许可下，给这个快递员分配口令。口令在一定时间内有效。在同一时间，会存在很多个不同业主授权的有效口令，但一个业主在同一时间只有一个有效口令。 角色间的类比关系如下。
 
-以下四个步骤，示例在GitHub建立了一个新的OAuth应用，获取授权吗，获取token，获取用户数据。 记录了每一步的关键输入输出参数。
+|-----|--------|-----|--------|
+|应用 | 下图中的Client| GitHub OAuth APP | 快递公司 | 
+| 系统 | 下图中的Authorization Server和Resource Server |GitHub | 小区 | 
+| 用户 | 下图中的Resource Owner| GitHub用户 | 小区业主 | 
+
+
+![picture 4](/img/1646056955927.png)  
+
+
+下图出自RFC6750， 实际实现时候，Client是APP， Auth Server/Resource Server在同一个域名后面（GitHub，钉钉，Facebook...)， Resource Owner也是在这个域名下完成授权（Auth Grant）。
+
+```
+
+     +--------+                               +---------------+
+     |        |--(A)- Authorization Request ->|   Resource    |
+     |        |                               |     Owner     |
+     |        |<-(B)-- Authorization Grant ---|               |
+     |        |                               +---------------+
+     |        |
+     |        |                               +---------------+
+     |        |--(C)-- Authorization Grant -->| Authorization |
+     | Client |                               |     Server    |
+     |        |<-(D)----- Access Token -------|               |
+     |        |                               +---------------+
+     |        |
+     |        |                               +---------------+
+     |        |--(E)----- Access Token ------>|    Resource   |
+     |        |                               |     Server    |
+     |        |<-(F)--- Protected Resource ---|               |
+     +--------+                               +---------------+
+
+```
+
+为讨论方便， 以下将获取用户授权简称为“获取code”， 将获取访问令牌（Access Token）简称为“获取Token”。
+
+接下来分别使用GitHub和钉钉作为OAuth服务器，来解析获取code，获取token以及读取用户信息过程中的消息格式。全程不需要写代码，需要用浏览器和REST Client（POSTMAN， CURL或者Vscode的插件都可以）。
+
+## 2. GitHub OAuth交互解析
+
+以下四个步骤，示例了：
+
+1. 在GitHub建立了一个新的OAuth应用，
+2. 通过GitHub提供的API获取授权吗，
+3. 通过GitHub提供的API获取token，
+4. 通过GitHub提供的API获取授权用户的数据。 
+
+记录了每一步的关键输入输出参数。
 
 ### 2.1. 创建OAuth APP
 
@@ -71,7 +120,7 @@ post https://github.com/login/oauth/access_token?client_id=7ece5cc78e4fdd3260ae&
 access_token=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&scope=&token_type=bearer
 ```
 
-这时候登录GitHub在创建的应用配置界面，能够看到已经有一个该应用已经有一个用户了。 并且我可以Revoke All user tokens。
+这时候登录GitHub在创建的应用配置界面，能够看到该应用已经有一个用户了。 并且我可以Revoke All user tokens。
 
 ### 2.4. 读取用户信息
 
@@ -120,17 +169,18 @@ Authorization: token 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
 }
 ```
 
-从上面的流程可以看出， Authorization Request
-是在浏览器和GitHub之间进行的，得到Access Token（授权码）是GitHub Redirect过来的，浏览器会拿到。
-但是申请Token可以在后台和GitHub之间。 这样最终得到的Token不会在前端出现。 
+> 
+> 从实现的安全性角度考虑，申请Token可以在后台和GitHub之间。 这样最终得到的Token不会在前端出现。 
+> - Authorization Request 在浏览器和GitHub之间进行，得到Access Code（授权码）是GitHub Redirect过来的，浏览器会拿到。
+> - 可以将Client Secret只在后台保存，所以前端即便得到Access Code，也没办法自己调用API来从GitHub得到Token。
 
-注意： 因为Client Secret只在后台保存，所以前端即便得到Access Token，也没办法自己调用API来从GitHub得到Token。
+
 前端用client id请求到了该应用可以用的access code, 后端再用client secret和access code一起申请token。 
-通过两步申请的设计，做到了token不暴露给前端，增强了安全性。
+通过两步申请的设计，即满足了必须用前端做用户授权的需求，又做到了token不暴露给前端，增强了安全性。
 
-## 3. 钉钉 OAuth交互示例
+## 3. 钉钉 OAuth交互解析
 
-在钉钉上尝试了下，除了需要配置两个读取个人信息的权限外，流程和GitHub类似。
+在钉钉上，除了需要配置OAuth应用，增加两个读取个人信息的权限外，其它流程和GitHub类似。
 
 ### 3.1. 创建OAuth APP
 
@@ -195,11 +245,15 @@ Content-Type:application/json
 
 ```
 
+### 3.5. 关于和标准的兼容性
+
+钉钉的OAuth 2实现中， 其很多参数名称和RFC6749中的定义不一致。 例如code在钉钉中叫做authCode，client_id在钉钉中叫做clientId，grant_type被重命名为grantType，...  和标准不兼容会导致通用的OAuth库（例如openid-client）无法直接和钉钉互通。这种不兼容的协议设计导致软件无法重用，社会资源浪费，应该被鄙视。
 
 ## 4. 参考
 
-- http://www.ruanyifeng.com/blog/2019/04/oauth_design.html
-- https://datatracker.ietf.org/doc/html/rfc6749
-- https://open.dingtalk.com/document/orgapp-server/tutorial-obtaining-user-personal-information
+- [OAuth 2 协议介绍](http://www.ruanyifeng.com/blog/2019/04/oauth_design.html)
+- [RFC6750 OAuth 2 Framework Bearer Token Usage](https://www.ietf.org/rfc/rfc6750.txt)
+- [RFC6749 OAuth 2 Framework](https://www.ietf.org/rfc/rfc6749.txt)
+- [钉钉文档](https://open.dingtalk.com/document/orgapp-server/tutorial-obtaining-user-personal-information)
 
 

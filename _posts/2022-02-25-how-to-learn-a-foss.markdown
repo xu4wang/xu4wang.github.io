@@ -7,6 +7,7 @@ author:     "awis.me"
 header-img: "img/boat.jpg"
 tags:
     - Open Source
+    - Directus
 ---
 
 ## 1. 引言
