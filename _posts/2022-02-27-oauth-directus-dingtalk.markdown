@@ -79,7 +79,7 @@ AUTH_DINGTALK_ICON="alipay"
 #AUTH_DINGTALK_IDENTIFIER_KEY="email"
 ```
 
-![picture 3](/img/1645972456212.png)  
+![picture 3](/img/1645972456212.jpg)  
 
 点击Log In with Dingtalk可以正常授权， 但授权后被redirect到了
 ```
