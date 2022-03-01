@@ -1,7 +1,7 @@
 ---
 layout:     post
-title:      "OAuth2 应用实践：Directus集成钉钉登录"
-subtitle:   "Enable Dingtalk OAuth Login for Directus "
+title:      "OAuth2 应用实践：Directus集成钉钉登录的尝试"
+subtitle:   "Unable to add Dingtalk OAuth Login into Directus"
 date:       2022-02-27
 author:     "awis.me"
 header-img: "img/leaf.jpg"
@@ -13,7 +13,7 @@ tags:
     - Directus
 ---
 
-## 项目简介
+## 1. 项目简介
 
 这个小项目预期结果是让 Directus 支持使用钉钉账号来登录。 
 在了解OAuth2协议后(参见上一篇blog，参考资料1），已经有足够知识储备来实施。 Directus 原生支持使用GitHub登录， 所以，解决思路是先从GitHub入手。按下面步骤进行：
@@ -22,7 +22,7 @@ tags:
 - 配置Directus使用钉钉账号登录，由于钉钉的协议实现和RFC6749/GitHub有不同，这里有可能需要见招拆招
 - 上线Directus到服务器环境，在钉钉的PC版和手机版验证
 
-## 环境配置
+## 2. 环境配置
 
 在本地用ngrok暴漏出一个服务，来接受OAuth服务器的redirect。
 
@@ -32,7 +32,7 @@ ngrok http 8055
 
 得到 https://445a-240e-47c-30b0-3b10-600e-ea25-cde5-2334.ngrok.io/ 作为外网域名来访问本机8055端口的directus。
 
-## Directus 使用 GitHub账号登录
+## 3. Directus 使用 GitHub账号登录
 
 按参考资料2中配置参数。以下配置中，对每一个新的GitHub授权用户，Directus在登录过程中会使用用户email自动创建一个Directus用户，并且将其角色赋值为AUTH_GITHUB_DEFAULT_ROLE_ID。
 
@@ -57,7 +57,7 @@ AUTH_GITHUB_ICON="github"
 选择授权后，成功登录Directus。 检查Directus中新生成的用户和权限正常。
 ![picture 2](/img/1645953939304.png)  
 
-## Directus 使用钉钉账号登录
+## 4. Directus 使用钉钉账号登录的尝试
 
 先照猫画虎配置下。
 
@@ -173,14 +173,26 @@ OAuth2 Driver使用了[openid-client](https://github.com/panva/node-openid-clien
 
 所以问题细化成了 [openid-client](https://github.com/panva/node-openid-client) 和钉钉的兼容性。再具体一些，是如何用[oauthCallback函数](https://github.com/panva/node-openid-client/tree/main/docs)来从钉钉处获取token。
 
-看了下openid-client的实现，其和OAuth服务器交互时候，POST的表单数据是按照RFC6749中定义的参数名称硬编码的。 必然和钉钉的要求不匹配。 使用openid-client没有办法兼容钉钉。
+看了下openid-client的实现，其和OAuth服务器交互时候，POST的表单数据是按照RFC6749中定义的参数名称硬编码的。 必然和钉钉的要求不匹配。 使用openid-client没有办法兼容钉钉。 将调研结果和directus OAuth Driver的作者在[Integrating Dingtalk as OAuth2 server](http://github.com/directus/directus/discussions/11881) 做了详细的探讨。
 
+## 5. 结论
 
-## 参考资料
+原定计划无法达成。 原因是钉钉的OAuth实现和标准不兼容。而Directus使用了第三方的OAuth库来和OAuth服务器通信。 基于标准的openid-client和说方言的钉钉OAuth服务器无法沟通。
+
+考虑两种方案：
+1. 从directus标准oauth2 driver中继承，实现一个钉钉方言版本的oauth2-dingtalk driver， 或者
+2. 实现一个proxy，来做钉钉的OAuth方言和标准OAuth2协议的翻译
+
+倾向于方案2， 相当于给钉钉做一个协议封装层，按照标准转换下参数格式。这样后续有其他系统需要集成钉钉登录，也可以用的上。
+
+后续完成后再补记。
+
+## 6. 参考资料
 
 - [OAuth2 Protocol Illustrated](https://awis.me/2022/02/26/oauth/)
 - [Directus Authentication Configuration](https://docs.directus.io/configuration/config-options/#authentication)
 - [node openid client](https://github.com/panva/node-openid-client)
-
-
+- [钉钉Nodejs SDK](https://www.npmjs.com/package/@alicloud/dingtalk)
+- [钉钉开放平台开发文档中获得token的示例 ](https://open.dingtalk.com/document/orgapp-server/obtain-user-token)
+- [Integrating Dingtalk as OAuth2 server](http://github.com/directus/directus/discussions/11881)
 
