@@ -1,0 +1,41 @@
+---
+layout:     post
+title:      "一个简单的API Proxy"
+subtitle:   "A simple API Proxy"
+date:       2022-03-05
+author:     "awis.me"
+header-img: "img/diy.jpg"
+tags:
+    - Open Source
+    - Typescript
+    - 钉钉
+    - OAuth
+    - Directus
+---
+
+## 1. 起因
+
+在配置Directus使用钉钉扫码登录时候，发现钉钉的免密登录（OAuth 2）和RFC规范不一致。 需要做协议转换后才能和Directus正常通信。 需求比较小众，没有现成的软件，只好自己动手了。
+
+## 2. 主要功能
+
+1. 能作为API通信的中间人， 转发客户端和API服务器之间的通信， 记录LOG，方便分析协议；
+2. 作为中间人，能修改请求的内容， 修改响应的内容；可以做协议适配，转换。
+
+> APIPROXY is a RESTFUL API proxy, monitor and adaptor.
+
+> Forward RESTFUL API to another host. It's man in the middle who can monitor and modify the header and body of the API Request & Response. Good for protocol study and adaptation.
+
+Features
+- API proxy: forward any incoming API to remote sever and return the response back to client.
+- API monitor: you can get detailed log of the API req and res in the log file.
+- API adpator: modify the request and response on the fly while forwarding, including parameters, body, http headers etc.
+- API mock server: you can add your own API for testing purpose easily.
+
+## 3. 目前状态
+
+初步实现了对钉钉OAuth2协议的RFC6749兼容封装。 目前Directus已经可以通过它的翻译支持钉钉免密登录。
+
+## 4. 参考 
+
+- [APIPROXY](https://github.com/xu4wang/apiproxy)

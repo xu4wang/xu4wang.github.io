@@ -1,0 +1,34 @@
+---
+layout:     post
+title:      "基点 bps 是什么"
+subtitle:   "What's basis point"
+date:       2022-03-03
+author:     "awis.me"
+header-img: "img/spring.jpg"
+tags:
+    - Finance
+---
+
+
+## bps是什么？
+
+bp（或者bps）是Basis Point的简称。 中文翻译成基点。 是一个比例， 万分之一的意思。 也就是1%的百分之一。
+
+## 为什么要有这个概念
+
+为什么不直接说万分之一，而引入一个新术语？
+
+> Basis points are convenient and steady. Basis points are less ambiguous than percentages as they represent an absolute, set figure instead of a ratio.
+>
+> For example, a 1 percent increase on a 5 percent interest rate could be interpreted as either 5.05 percent or 6 percent.
+>
+> Conversely, if the rate increases by 100 basis points, the result is constant. The rate updates to 6 percent.
+
+引入bps是为了表达更明确，避免二义性。 
+
+举个例子。 假设今天央行宣布LPR（Loan Prime Rate）从5%涨百分之一。 这时候，有两种不同的理解：
+
+- 新的LPR是  5% + 1% = 6%
+- 新的LPR是  5% + 5% * 1% = 5.05%
+
+引入bps后，央行说加100个基点。 那大家都没有歧义知道新LPR是 6%。
