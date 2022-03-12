@@ -38,7 +38,7 @@ Async Await是对Promise的进一步封装。让异步函数看起来象同步�
 
 下面抄自[google官方文档](https://developers.google.com/web/fundamentals/primers/async-functions)
 
-```JavaScript
+```javascript
 async function myFirstAsyncFunction() {
   try {
     const fulfilledValue = await promise;
@@ -54,7 +54,7 @@ async function myFirstAsyncFunction() {
 
 JavaScript程序在执行时候， 先逐行同步执行每一条语句。 当碰到callback时候，把该callback放入队列中，继续执行下一条语句,所有语句执行完之后，再看队列里面有哪些callback具备执行条件了，一一执行。参见后面的NodeJS Event Loop。
 
-```JavaScript
+```javascript
 doA(function() {
   
   doB();

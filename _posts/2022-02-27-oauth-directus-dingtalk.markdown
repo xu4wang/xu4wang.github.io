@@ -187,7 +187,11 @@ OAuth2 Driver使用了[openid-client](https://github.com/panva/node-openid-clien
 
 后续完成后再补记。
 
-## 6. 参考资料
+## 6. 补记
+
+参考[apiproxy](https://github.com/xu4wang/apiproxy)) 使用上述方案2实现了钉钉免密登录。
+
+## 7. 参考资料
 
 - [OAuth2 Protocol Illustrated](https://awis.me/2022/02/26/oauth/)
 - [Directus Authentication Configuration](https://docs.directus.io/configuration/config-options/#authentication)
@@ -195,4 +199,4 @@ OAuth2 Driver使用了[openid-client](https://github.com/panva/node-openid-clien
 - [钉钉Nodejs SDK](https://www.npmjs.com/package/@alicloud/dingtalk)
 - [钉钉开放平台开发文档中获得token的示例 ](https://open.dingtalk.com/document/orgapp-server/obtain-user-token)
 - [Integrating Dingtalk as OAuth2 server](http://github.com/directus/directus/discussions/11881)
-
+- [apiproxy](https://github.com/xu4wang/apiproxy)

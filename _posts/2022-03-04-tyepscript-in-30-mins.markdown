@@ -1,15 +1,17 @@
 ---
 layout:     post
-title:      "30分钟Typescript"
-subtitle:   "Typescript in 30 mins"
+title:      "Typescript"
+subtitle:   "Typescript from zero to hero"
 date:       2022-03-04
 author:     "awis.me"
 header-img: "img/star2.jpg"
 tags:
     - Typescript
+    - 随时更新
 ---
 
-看了个youtube视频，简单整理下。 后续参考。
+> Typescript学习笔记。From zero to hero。
+
 
 ## 1. Array,Tuple,Union,Enum
 
@@ -65,7 +67,41 @@ enum Direction2 {
 }
 ```
 
-## 2. Object
+## 2. Map
+
+```javascript
+
+//定义
+type MapType = { 
+    [id: string]: string; 
+}
+
+//实例化
+const map: MapType = {};
+map['a'] = 'b';
+map['c'] = 'd';
+
+//删除
+delete map['c'];
+
+//枚举
+for (let i in map) {
+    console.log(map[i]);
+}
+
+//得到包含所有key的数组
+console.log(Object.keys(map));
+
+//另外一种用Record的实现方式
+const map: Record<string, string> = {};
+map['a'] = 'b';
+map['c'] = 'd';
+
+
+```
+
+
+## 3. Object
 
 
 ```javascript
@@ -86,7 +122,7 @@ let cid: any = 1
 let customerId = cid as number
 ```
 
-## 3. Function
+## 4. Function
 
 ```js
 // Functions
@@ -100,7 +136,7 @@ function log(message: string | number): void {
 }
 ```
 
-## 4. Interface, Class
+## 5. Interface, Class
 
 ```js
 // Interfaces
@@ -159,7 +195,7 @@ class Employee extends Person {
 const emp = new Employee(3, 'Shawn', 'Developer')
 ```
 
-## 5. Generics
+## 6. Generics
 
 ```js
 // Generics => C++的泛型
@@ -173,12 +209,25 @@ let strArray = getArray<string>(['brad', 'John', 'Jill'])
 strArray.push(1) // Throws error
 
 ```
+ 
+## 7. FAQ
 
-## 6. d.ts 文件
+### 7.1. type alias or interface
+
+[https://www.typescriptlang.org/docs/handbook/2/everyday-types.html#differences-between-type-aliases-and-interfaces](https://www.typescriptlang.org/docs/handbook/2/everyday-types.html#differences-between-type-aliases-and-interfaces)
+
+- 区别不大，一般可尽量用interface
+- type对简单类型的别名。常用给枚举类型起一个名字，后面好用。 例如
+
+```javascript
+type ID = number | string;
+type ABC = 'a' | 'b' | 'c'
+```
+## 8. d.ts 文件
 
 这个类似C语言的头文件。 里面都是类型定义。 有了这些，就可以知道在typescript里面如何使用一个javascript库了。DefinitelyTyped是typescript社区维护的头文件库。第三方javascript的type都可以在那里找。
 
-## 7. 参考资料
+## 9. 参考资料
 
-- https://www.youtube.com/watch?v=BCg4U1FzODs
-- https://github.com/DefinitelyTyped/DefinitelyTyped
+- [https://www.youtube.com/watch?v=BCg4U1FzODs](https://www.youtube.com/watch?v=BCg4U1FzODs)
+- [https://github.com/DefinitelyTyped/DefinitelyTyped](https://github.com/DefinitelyTyped/DefinitelyTyped)

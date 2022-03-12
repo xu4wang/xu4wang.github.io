@@ -47,7 +47,7 @@ GET https://api.dingtalk.com/v1.0/contact/users/me
 x-acs-dingtalk-access-token:a8f4e3215a703ce9a7164e91dbab53c0
 Content-Type:application/json
 
-
+###
 {
   "nick": "Austin Wang",
   "unionId": "D578iS5ho4okiE",
@@ -57,3 +57,17 @@ Content-Type:application/json
   "stateCode": "86",
   "email": "austin.wangxu@ksher.com"
 }
+
+###
+GET https://api.dingtalk.com/v1.0/contact/users/me 
+x-acs-dingtalk-access-token:31d3c8fabdb73c4bb19f6786df7bef96
+Content-Type:application/json
+
+
+###
+GET https://api.dingtalk.com/v1.0/contact/users/me 
+x-acs-dingtalk-access-token:b6d993257d8a3fd59dc05de06ae257ed
+Content-Type:application/json
+
+
+
