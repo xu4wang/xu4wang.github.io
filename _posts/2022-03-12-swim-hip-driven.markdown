@@ -4,7 +4,7 @@ title:      "髋驱自由泳"
 subtitle:   "Hip driven free style"
 date:       2022-03-12
 author:     "awis.me"
-header-img: "img/pool.jpg"
+header-img: "img/swim.jpg"
 tags:
     - 游泳
 ---
