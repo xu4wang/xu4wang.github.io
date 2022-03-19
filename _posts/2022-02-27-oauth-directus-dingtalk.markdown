@@ -189,7 +189,7 @@ OAuth2 Driver使用了[openid-client](https://github.com/panva/node-openid-clien
 
 ## 6. 补记
 
-参考[apiproxy](https://github.com/xu4wang/apiproxy)) 使用上述方案2实现了钉钉免密登录。
+参考[apiproxy](https://github.com/xu4wang/apiproxy) 使用上述方案2实现了钉钉免密登录。
 
 ## 7. 参考资料
 
