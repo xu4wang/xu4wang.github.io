@@ -90,6 +90,11 @@ OAuth2的过程是当有快递时候，业主授权小区物业给快递公司�
 
 接下来分别使用GitHub和钉钉作为OAuth服务器，来解析获取code，获取token以及读取用户信息过程中的消息格式。全程不需要写代码，需要用浏览器和REST Client（POSTMAN， CURL或者Vscode的插件都可以）。
 
+> OAUTH 客户端有两种：
+> 1. public：客户端本身没有能力保存密钥信息，比如桌面软件，手机App，单页面程序(SPA）。
+> 2. confidential ： 通过code换取access_token这一步是在后端的api完成。一般用client_secret保护。
+> 我们主要讨论confidential类客户端。
+
 ## 2. GitHub OAuth交互解析
 
 以下四个步骤，示例了：
@@ -271,11 +276,57 @@ Content-Type:application/json
 
 钉钉的OAuth 2实现中， 其很多参数名称和RFC6749中的定义不一致。 例如code在钉钉中叫做authCode，client_id在钉钉中叫做clientId，grant_type被重命名为grantType，...  和标准不兼容会导致通用的OAuth库（例如openid-client）无法直接和钉钉互通。这种不兼容的协议设计导致软件无法重用，社会资源浪费，应该被鄙视。
 
-## 4. 参考
+## 4. PKCE
+
+>    OAuth 2.0 public clients utilizing the Authorization Code Grant are
+   susceptible to the authorization code interception attack.  This
+   specification describes the attack as well as a technique to mitigate
+   against the threat through the use of Proof Key for Code Exchange
+   (PKCE, pronounced "pixy").
+
+PKCE 是OAUTH2的一个扩展， 其本意是解决public client（例如浏览器或者app应用）的安全性问题。 但后来对于我们上面描述的confidential类客户端也推荐使用。
+
+其基本原理是在第一步获取code时候, 额外多传给auth server两个参数：
+1. code challenge
+2. code challenge method
+
+```
+Provider + /oauth/redirect?
+client_id={client_id}
+&redirect_uri={Callback URL}
+&scope={Scope}
+&response_type=code
+&state={random long string}
+&code_challenge={code challenge}
+&code_challenge_method=SHA256
+```
+
+
+其中， 
+
+```
+code challenge = code_challenge_method (code verifier)
+```
+
+而code verifier是一个随机串。
+
+服务器在收到请求后，会保存 code challenge和 code_challenge_method， 然后发放code。
+
+接下来， 用code换取token时候， 客户端把 code verifier 和code一起给服务器。 这样服务器就可以验证换取token的这个客户端和最初申请code的客户端是不是一个。
+
+这样，就算恶意程序拦截到了授权码code，但是没有code_verifier，也是不能获取访问令牌的。
+
+> PKCE也可以用在机密（confidential）的客户端，那就是client_secret + code_verifier双重密钥了。
+
+如果OAUTH2只有client_secret而没有PKCE，也存在[用户身份被冒名顶替的风险](https://condatis.com/news/blog/oauth-confidential-clients/)。  
+
+攻击的原理是第三方使用浏览器插件，获取到code之后，让受害者的OAuth流程失败， 同时用盗窃的code来顶替受害者登录。 如果有了PKCE，受害者浏览器有code_verifier， code_verifier不会和code同时失窃（在获取token之前不会在网络上传输）， 所以攻击者拿到code也无法直接通过API服务器来冒充受害者。
+
+## 5. 参考 
 
 - [OAuth 2 协议介绍](http://www.ruanyifeng.com/blog/2019/04/oauth_design.html)
 - [RFC6750 OAuth 2 Framework Bearer Token Usage](https://www.ietf.org/rfc/rfc6750.txt)
 - [RFC6749 OAuth 2 Framework](https://www.ietf.org/rfc/rfc6749.txt)
 - [钉钉文档](https://open.dingtalk.com/document/orgapp-server/tutorial-obtaining-user-personal-information)
-
+- [https://datatracker.ietf.org/doc/html/rfc7636](https://datatracker.ietf.org/doc/html/rfc7636)
 
