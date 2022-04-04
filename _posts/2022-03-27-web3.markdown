@@ -8,6 +8,7 @@ header-img: "img/sleepchipmonk.jpg"
 tags:
     - web3
     - NFT
+    - blockchain
 ---
 
 > - 什么是NFT？什么是DAO？DeFi？GameFi？SocialFI？
