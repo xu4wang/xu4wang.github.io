@@ -1,0 +1,144 @@
+html, body {
+  height: 100%;
+}
+
+body {
+  margin: 0 30px;
+  padding-bottom: 125px;
+  overflow-x: hidden;
+}
+
+.header {
+  padding: 1px 0 30px;
+  display: flex;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+#content {
+  height: 100%;
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: stretch;
+}
+
+#permalink {
+  float: right;
+}
+
+#src {
+  width: calc(29% - 4px);
+  height: 100%;
+}
+
+#dst {
+  width: 71%;
+  height: 100%;
+}
+
+#resize {
+  width: 4px;
+  height: 100vh;
+  cursor: ew-resize;
+}
+
+#resize:hover {
+  background-color: blue;
+}
+
+#src .CodeMirror {
+  background-color: #fffffb;
+  border: 1px solid #888;
+  border-radius: 3px;
+  box-shadow: 0 0 3px #ccc inset;
+}
+
+#dst .CodeMirror {
+  background-color: #F8F8F8;
+  border: 1px solid #eee;
+  border-radius: 3px;
+}
+
+/*.CodeMirror-scroll {
+  height: 500px;
+  line-height: 1.2;
+}*/
+
+.CodeMirror {
+  height: 100%;
+  font-size: 13px;
+}
+
+.CodeMirror .cm-comment {
+  color: #baa;
+}
+
+.demo {
+  /* for IE10+ touch devices */
+  touch-action:none;
+}
+
+/** ELEMENTS **/
+.drag-drop-demo .window {
+  font-family: serif;
+  background-color: white;
+  border: 1px solid #346789;
+  text-align: center;
+  z-index: 24;
+  cursor: pointer;
+  box-shadow: 2px 2px 19px #aaa;
+  -o-box-shadow: 2px 2px 19px #aaa;
+  -webkit-box-shadow: 2px 2px 19px #aaa;
+  -moz-box-shadow: 2px 2px 19px #aaa;
+  -moz-border-radius: 0.5em;
+  border-radius: 0.5em;
+  position: absolute;
+  color: black;
+  padding-top: 5px;
+  padding-bottom: 30px;
+  width: 140px;
+  height: 120px;
+  line-height: 12px;
+  -webkit-transition: -webkit-box-shadow 0.15s ease-in;
+  -moz-transition: -moz-box-shadow 0.15s ease-in;
+  -o-transition: -o-box-shadow 0.15s ease-in;
+  transition: box-shadow 0.15s ease-in;
+}
+
+.window:hover {
+  border:1px solid #123456;
+  box-shadow: 2px 2px 19px #444;
+  -o-box-shadow: 2px 2px 19px #444;
+  -webkit-box-shadow: 2px 2px 19px #444;
+  -moz-box-shadow: 2px 2px 19px #fff;
+  opacity:0.9;
+}
+
+
+.drag-drop-demo a, .drag-drop-demo a:visited {
+  color:#057D9F;
+}
+
+.drag-drop-demo a:hover {
+  color:orange;
+}
+
+.drag-drop-demo img {
+  max-width:100%;
+  max-height:100%;
+  object-fit:scale-down;
+}
+/** LINKS IN WINDOWS **/
+.drag-locked { border:1px solid red; }
+.cmdLink { font-size:0.80em;}
+
+/** DRAG/DROP CLASSES **/
+.dragActive { border:2px dotted orange; }
+.dropHover { border:1px dotted red; }
+
+path, .jtk-endpoint { cursor:pointer; }
+
+[jtk-not-draggable] {
+  border:2px solid darkorange !important;
+}
+
