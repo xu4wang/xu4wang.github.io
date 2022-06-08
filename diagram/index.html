@@ -7,11 +7,7 @@
     <meta name="keywords" content="yaml,parser,javascript">
 
     <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no"/>
-    <link href="https://netdna.bootstrapcdn.com/font-awesome/4.0.3/css/font-awesome.css" rel="stylesheet">
-    
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/markdown-it/13.0.1/markdown-it.min.js"></script>
-
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/bootstrap/3.3.6/css/bootstrap.css">
+ 
     <link rel="stylesheet" href="codemirror.css">
 
     <link rel="stylesheet" href="jsplumbtoolkit.css">
@@ -25,9 +21,13 @@
     <div class="header">
       <h1>Diagram Builder</h1>
     </div>
+    <h4 class="subheader">
+    <a href="#" id="permalink">permalink</a> Edit Source:
+    <select name="dropdown" id="dropdown">
+    </select>
+  </h4>
     <div id="content">
       <div id="src">
-        <h4 class="subheader"><a href="#" id="permalink">permalink</a> Edit source here:</h4>
         <textarea id="source">
 default:
   width: 100
@@ -39,30 +39,16 @@ nodes:
     top: 31px
     left: 52px
     border: 2px dashed green
-    md: >
-      ![](https://img0.baidu.com/it/u=2858396836,3387897168&fm=253&fmt=auto&app=138&f=JPEG)
-
-
-
-      Markdown
   n2:
     top: 9px
     left: 637px
     width: 200
     height: 200
-    md: |
-      ![](https://www.json.org/img/json160.gif)
-
-      JSON
   n3:
     top: 294px
     left: 54px
     border: false
     height: 100
-    md: >
-      ![](https://p3.itc.cn/q_70/images03/20210824/491f8573163b4e9aa95b465839726d34.png)
-
-      YAML
   n4:
     top: 269px
     left: 386px
@@ -72,10 +58,6 @@ nodes:
     padding-left: 20px
     background-color: yellow
     border: 0px
-    md: |
-      ### Topic
-      1. item 1
-      2. item 2
 edges:
   - from: n1
     to: n2
