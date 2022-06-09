@@ -13963,23 +13963,31 @@ var diagram = (function () {
 	function init_from_permlink(b64) {
 	  //init from b64 data
 	  window.diagram_documents = {};
-
-	  var obj_str = base64.decode(b64);
-	  var obj = JSON.parse(obj_str);
-	  /*
-	  diagram: ...
-	  n1:...
-	  n2:...
-	  */
-	  for (let n in obj) {
-	    if (obj.hasOwnProperty(n)) {
-	      if (n === 'diagram') {
-	        update_document(n, 'yaml', obj[n]);
-	      } else {
-	        update_document(n, 'markdown', obj[n]);
+	  try {
+	    var obj_str = base64.decode(b64);
+	    var obj = JSON.parse(obj_str);
+	    /*
+	    diagram: ...
+	    n1:...
+	    n2:...
+	    */
+	    if (obj) {
+	      for (let n in obj) {
+	        if (obj.hasOwnProperty(n)) {
+	          if (n === 'diagram') {
+	            update_document(n, 'yaml', obj[n]);
+	          } else {
+	            update_document(n, 'markdown', obj[n]);
+	          }
+	        }
 	      }
+	    } else {
+	      return false;
 	    }
+	  } catch (error) {
+	    return false;
 	  }
+	  return true;
 	}
 
 	function build_permlink() {
@@ -23318,17 +23326,23 @@ var diagram = (function () {
 	  //update_permlink();
 	}
 
+	function open_local_file(diag_name) {
+	  let d = window.localStorage.getItem(diag_name);
+	  if (d) {
+	    model.init_from_permlink(d);
+	  } else {
+	    model.update_document('diagram', 'yaml', default_text);
+	  }
+	}
+
 	function open_document() {
 	  if (location.hash && location.hash.toString().slice(0, 6) === '#diag=') {
-	    model.init_from_permlink(location.hash.slice(6));
+	    if (!model.init_from_permlink(location.hash.slice(6))) {
+	      open_local_file(diag_name);
+	    }
 	  } else {
 	    diag_name += location.hash;
-	    let d = window.localStorage.getItem(diag_name);
-	    if (d) {
-	      model.init_from_permlink(d);
-	    } else {
-	      model.update_document('diagram', 'yaml', default_text);
-	    }
+	    open_local_file(diag_name);
 	  }
 	  model.set_active_document('diagram');
 	  source.setValue(model.get_document_content('diagram'));
