@@ -23246,7 +23246,9 @@ var diagram = (function () {
 
 
 	function update_permlink() {
-	  permalink.href = '#diag=' + model.build_permlink();
+	  var data =  model.build_permlink();
+	  permalink.href = '#diag=' + data;
+	  window.localStorage.setItem('diagram', data);
 	}
 
 	function update_dropdown() {
@@ -23320,7 +23322,12 @@ var diagram = (function () {
 	  if (location.hash && location.hash.toString().slice(0, 6) === '#diag=') {
 	    model.init_from_permlink(location.hash.slice(6));
 	  } else {
-	    model.update_document('diagram', 'yaml', default_text);
+	    let d = window.localStorage.getItem('diagram');
+	    if (d) {
+	      model.init_from_permlink(d);
+	    } else {
+	      model.update_document('diagram', 'yaml', default_text);
+	    }
 	  }
 	  model.set_active_document('diagram');
 	  source.setValue(model.get_document_content('diagram'));
@@ -23334,22 +23341,16 @@ var diagram = (function () {
 	  var right = document.getElementById('dst');
 	  var container = document.getElementById('content');
 	  resize.onmousedown = function (e) {
-	    // 记录鼠标按下时的x轴坐标
 	    var preX = e.clientX;
 	    resize.left = resize.offsetLeft;
 	    document.onmousemove = function (e) {
 	      var curX = e.clientX;
 	      var deltaX = curX - preX;
 	      var leftWidth = resize.left + deltaX;
-	      // 左边区域的最小宽度限制为64px
 	      if (leftWidth < 64) leftWidth = 64;
-	      // 右边区域最小宽度限制为64px
 	      if (leftWidth > container.clientWidth - 64) leftWidth = container.clientWidth  - 64;
-	      // 设置左边区域的宽度
 	      left.style.width = leftWidth + 'px';
-	      // 设备分栏竖条的left位置
 	      resize.style.left = leftWidth;
-	      // 设置右边区域的宽度
 	      right.style.width = (container.clientWidth - leftWidth - 4) + 'px';
 	    };
 	    //eslint-disable-next-line
@@ -23367,7 +23368,6 @@ var diagram = (function () {
 	    mode: 'yaml',
 	    lineNumbers: true
 	  });
-	  //setOption("mode", mode); to switch markdown and yaml
 
 	  var timer;
 
@@ -23381,7 +23381,6 @@ var diagram = (function () {
 
 	  //it will be updated automatically. by the timer.
 	  var canvas = document.getElementById('canvas');
-	  //console.log(canvas);
 
 	  jsPlumbBrowserUI.ready(function () {
 	    window.j = jsPlumbBrowserUI.newInstance({
