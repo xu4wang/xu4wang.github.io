@@ -23226,7 +23226,7 @@ var diagram = (function () {
 
 
 
-	var source, permalink, default_text, dropdown;
+	var source, permalink, default_text, dropdown, diag_name = 'diagram';
 
 	//retrieve the top/left parameters of each node, rebuild yaml
 	function node_moved() {
@@ -23248,7 +23248,7 @@ var diagram = (function () {
 	function update_permlink() {
 	  var data =  model.build_permlink();
 	  permalink.href = '#diag=' + data;
-	  window.localStorage.setItem('diagram', data);
+	  window.localStorage.setItem(diag_name, data);
 	}
 
 	function update_dropdown() {
@@ -23322,7 +23322,8 @@ var diagram = (function () {
 	  if (location.hash && location.hash.toString().slice(0, 6) === '#diag=') {
 	    model.init_from_permlink(location.hash.slice(6));
 	  } else {
-	    let d = window.localStorage.getItem('diagram');
+	    diag_name += location.hash;
+	    let d = window.localStorage.getItem(diag_name);
 	    if (d) {
 	      model.init_from_permlink(d);
 	    } else {
