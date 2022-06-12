@@ -3,7 +3,7 @@ html, body {
 }
 
 body {
-  margin: 0 30px;
+  margin: 0 20px;
   padding-bottom: 125px;
   overflow-x: hidden;
 }
@@ -16,38 +16,41 @@ body {
 }
 
 .subheader {
-  margin: 4px;
+  margin-bottom: 10px;
 }
 
 #content {
   height: 100%;
+  width: 100%;
   display: flex;
   flex-wrap: nowrap;
   align-items: stretch;
+  position: relative;
+}
+
+#search_box {
+  margin-right: 10px;
 }
 
 #permalink {
   float: right;
 }
 
+
+#explorer-container {
+  width: 20%;
+  height: 100vh;
+  flex-direction: column;
+}
+
 #src {
-  width: calc(29% - 4px);
-  height: 100%;
+  width: 20%;
+  height: 100vh;
 }
 
 #dst {
-  width: 71%;
-  height: 100%;
-}
-
-#resize {
-  width: 4px;
+  width: 100%;
   height: 100vh;
-  cursor: ew-resize;
-}
-
-#resize:hover {
-  background-color: blue;
 }
 
 #src .CodeMirror {
@@ -174,5 +177,50 @@ caption {
 
 tr,td,th {
   vertical-align: middle;
+}
+
+.clusterize {
+  width: 100% !important;
+  height: 100%;
+  margin-top: 10px;
+  padding-left: 0px;
+  padding-right: 0px;
+}
+
+input{
+  width: 100%;
+}
+
+.button-32 {
+  align-items: center;
+  background-color: #b6e0f1;
+  border-radius: 12px;
+  box-shadow: transparent 0 0 0 3px,rgba(18, 18, 18, .1) 0 6px 20px;
+  box-sizing: border-box;
+  color: #121212;
+  cursor: pointer;
+  display: inline-flex;
+  flex: 1 1 auto;
+  font-family: Inter,sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  justify-content: center;
+  line-height: 1;
+  margin: 0;
+  outline: none;
+  padding: 0.5rem 0.5rem;
+  text-align: center;
+  text-decoration: none;
+  transition: box-shadow .2s,-webkit-box-shadow .2s;
+  white-space: nowrap;
+  border: 0;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+  margin-right: 4px;
+}
+
+.button-32:hover {
+  box-shadow: #121212 0 0 0 3px, transparent 0 0 0 0;
 }
 
