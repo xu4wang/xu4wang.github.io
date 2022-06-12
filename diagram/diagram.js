@@ -4361,6 +4361,7 @@ var diagram = (function () {
 
   function set_config(key, value) {
     set_common_attr(config_file, key, value);
+    state.emit('DOCUMENT-UPDATE', () => ({}));
   }
 
 
@@ -23866,8 +23867,16 @@ var diagram = (function () {
     }
   }
 
+  /*
+  let bigCities = cities.filter(function (e) {
+      return e.population > 3000000;
+  });
+  */
+
+
   function rm_cb() {
     let name = model.get_active_document();
+    let org_name = name;
     name += '__TOOLBAR__';
     if (widgets.has(name)) {
       widgets.delete(name);
@@ -23876,6 +23885,11 @@ var diagram = (function () {
       let e = document.getElementById(name);
       e.remove();
       //e.parentNode.removeChild(e);
+      let conf = model.get_config('buttons') || [];
+      conf = conf.filter(function (e) {
+        return e !== org_name;
+      });
+      model.set_config('buttons', conf);
     }
   }
 
