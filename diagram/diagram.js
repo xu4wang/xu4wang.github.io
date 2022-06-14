@@ -4140,15 +4140,6 @@ var diagram = (function () {
       h.__content = content;
     }
 
-    if (h.name) {
-      if (h.name !== name) {
-        delete docs[name];
-        //notify listener that a file was delete
-        state.emit('DOCUMENT-DELETE', { impacted: name });
-      }
-      name = h.name;
-    }
-
     if (!docs[name]) {
       //notify listener that a file was created
       new_file_created = true;
@@ -4184,7 +4175,6 @@ var diagram = (function () {
     name = String(name);
     state.emit('DOCUMENT-UPDATE', ({ impacted, documents }) => (_update_document(impacted, documents, name, content)));
   }
-
 
   function get_subnode_names(id) {
     var diagram_documents = state.get_store().documents;
@@ -4341,9 +4331,11 @@ var diagram = (function () {
     for (let d in docs) {
       if (docs.hasOwnProperty(d)) {
         ret.add(d);
+        /*
         for (let s of get_subnode_names(d)) {
           ret.add(s);
         }
+        */
       }
     }
     var ret2 = {};
@@ -4364,6 +4356,25 @@ var diagram = (function () {
     state.emit('DOCUMENT-UPDATE', () => ({}));
   }
 
+  function rename_document(src, target) {
+    state.emit('DOCUMENT-RENAME', (s) => {
+      s.documents[target] = s.documents[src];
+      delete s.documents[src];
+      return s;
+    });
+  }
+
+  function delete_document(name) {
+    state.emit('DOCUMENT-DELETE', (s) => {
+      delete s.documents[name];
+      return s;
+    });
+  }
+
+  function document_available(name) {
+    var docs = state.get_store().documents;
+    return name in docs;
+  }
 
   function reset() {
     state.emit('RESET', () => ({
@@ -4381,9 +4392,12 @@ var diagram = (function () {
   var get_impacted_document_1 = get_impacted_document;
 
   var get_documents_1 = get_documents;
-  var update_document_1 = update_document;
+  var update_document_1 = update_document;   //new doc & modify doc
   var get_document_content_1 = get_document_content;
   var get_document_body_1 = get_document_body;
+  var rename_document_1 = rename_document;
+  var delete_document_1 = delete_document;
+  var document_available_1 = document_available;
 
   var get_subnode_names_1 = get_subnode_names;
   var get_edges_1 = get_edges;
@@ -4403,6 +4417,7 @@ var diagram = (function () {
   'ACTIVE-DOCUMENT'
   'DOCUMENT-UPDATE'
   "DOCUMENT-DELETE"
+  "DOCUMENT-RENAME"
   "DOCUMENT-CREATE"
   'RESET'
   *****************/
@@ -4418,6 +4433,9 @@ var diagram = (function () {
   	update_document: update_document_1,
   	get_document_content: get_document_content_1,
   	get_document_body: get_document_body_1,
+  	rename_document: rename_document_1,
+  	delete_document: delete_document_1,
+  	document_available: document_available_1,
   	get_subnode_names: get_subnode_names_1,
   	get_edges: get_edges_1,
   	get_attr: get_attr_1,
@@ -11809,9 +11827,11 @@ var diagram = (function () {
     }
     default_attrs.source = id2element(attrs.from);
     default_attrs.target = id2element(attrs.to);
-    var instance = window.j;
-    default_attrs = mixinDeep_1(default_attrs, attrs);
-    instance.connect(default_attrs);
+    if (model.document_available(default_attrs.source) && model.document_available(default_attrs.target)) {
+      var instance = window.j;
+      default_attrs = mixinDeep_1(default_attrs, attrs);
+      instance.connect(default_attrs);
+    }
   }
 
   function add_edges(edges) {
@@ -11951,7 +11971,9 @@ var diagram = (function () {
       add_only_node(name, model.get_attrs(name), model.get_document_body(name));
     } else {
       for (let n of l) {
-        add_only_node(n, model.get_attrs(n), model.get_document_body(n));
+        if (model.document_available(n)) {
+          add_only_node(n, model.get_attrs(n), model.get_document_body(n));
+        }
         //add_node(model, n);
       }
       edges.add_edges(model.get_edges(name));  //add edges here sine edges are part of node.
@@ -12032,11 +12054,22 @@ var diagram = (function () {
     });
   }
 
+  var current_doc = '';
 
   model.on('ACTIVE-DOCUMENT', ({ active }) => {
     if (window.j) {
       window.j.reset();
       node_1.add_node(model, active);
+      current_doc = active;
+    }
+  });
+
+  model.on('DOCUMENT-UPDATE', ({ impacted }) => {
+    if (window.j) {
+      if (current_doc === impacted) {
+        window.j.reset();
+        node_1.add_node(model, impacted);
+      }
     }
   });
 
@@ -12052,9 +12085,314 @@ var diagram = (function () {
   	init: init_1$1
   };
 
+  // https://github.com/m-thalmann/contextmenujs
+  function ContextMenu(menu, options) {
+    var self = this;
+    var num = ContextMenu.count++;
+
+    this.menu = menu;
+    this.contextTarget = null;
+
+    if (!(menu instanceof Array)) {
+      throw new Error('Parameter 1 must be of type Array');
+    }
+
+    if (typeof options !== 'undefined') {
+      if (typeof options !== 'object') {
+        throw new Error('Parameter 2 must be of type object');
+      }
+    } else {
+      options = {};
+    }
+
+    window.addEventListener('resize', function () {
+      if (ContextUtil.getProperty(options, 'close_on_resize', true)) {
+        self.hide();
+      }
+    });
+
+    this.setOptions = function (_options) {
+      if (typeof _options === 'object') {
+        options = _options;
+      } else {
+        throw new Error('Parameter 1 must be of type object');
+      }
+    };
+
+    this.changeOption = function (option, value) {
+      if (typeof option === 'string') {
+        if (typeof value !== 'undefined') {
+          options[option] = value;
+        } else {
+          throw new Error('Parameter 2 must be set');
+        }
+      } else {
+        throw new Error('Parameter 1 must be of type string');
+      }
+    };
+
+    this.getOptions = function () {
+      return options;
+    };
+
+    this.reload = function () {
+      if (document.getElementById('cm_' + num) == null) {
+        var cnt = document.createElement('div');
+        cnt.className = 'cm_container';
+        cnt.id = 'cm_' + num;
+
+        document.body.appendChild(cnt);
+      }
+
+      var container = document.getElementById('cm_' + num);
+      container.innerHTML = '';
+
+      container.appendChild(renderLevel(menu));
+    };
+
+    function renderLevel(level) {
+      var ul_outer = document.createElement('ul');
+
+      level.forEach(function (item) {
+        var li = document.createElement('li');
+        li.menu = self;
+
+        if (typeof item.type === 'undefined') {
+          var icon_span = document.createElement('span');
+          icon_span.className = 'cm_icon_span';
+
+          if (ContextUtil.getProperty(item, 'icon', '') != '') {
+            icon_span.innerHTML = ContextUtil.getProperty(item, 'icon', '');
+          } else {
+            icon_span.innerHTML = ContextUtil.getProperty(options, 'default_icon', '');
+          }
+
+          var text_span = document.createElement('span');
+          text_span.className = 'cm_text';
+
+          if (ContextUtil.getProperty(item, 'text', '') != '') {
+            text_span.innerHTML = ContextUtil.getProperty(item, 'text', '');
+          } else {
+            text_span.innerHTML = ContextUtil.getProperty(options, 'default_text', 'item');
+          }
+
+          var sub_span = document.createElement('span');
+          sub_span.className = 'cm_sub_span';
+
+          if (typeof item.sub !== 'undefined') {
+            if (ContextUtil.getProperty(options, 'sub_icon', '') != '') {
+              sub_span.innerHTML = ContextUtil.getProperty(options, 'sub_icon', '');
+            } else {
+              sub_span.innerHTML = '&#155;';
+            }
+          }
+
+          li.appendChild(icon_span);
+          li.appendChild(text_span);
+          li.appendChild(sub_span);
+
+          if (!ContextUtil.getProperty(item, 'enabled', true)) {
+            li.setAttribute('disabled', '');
+          } else {
+            if (typeof item.events === 'object') {
+              var keys = Object.keys(item.events);
+
+              for (var i = 0; i < keys.length; i++) {
+                li.addEventListener(keys[i], item.events[keys[i]]);
+              }
+            }
+
+            if (typeof item.sub !== 'undefined') {
+              li.appendChild(renderLevel(item.sub));
+            }
+          }
+        } else  if (item.type == ContextMenu.DIVIDER) {
+          li.className = 'cm_divider';
+        }
+
+        ul_outer.appendChild(li);
+      });
+
+      return ul_outer;
+    }
+
+    this.display = function (e, target) {
+      if (typeof target !== 'undefined') {
+        self.contextTarget = target;
+      } else {
+        self.contextTarget = e.target;
+      }
+
+      var menu = document.getElementById('cm_' + num);
+
+      var clickCoords = { x: e.clientX, y: e.clientY };
+      var clickCoordsX = clickCoords.x;
+      var clickCoordsY = clickCoords.y;
+
+      var menuWidth = menu.offsetWidth + 4;
+      var menuHeight = menu.offsetHeight + 4;
+
+      var windowWidth = window.innerWidth;
+      var windowHeight = window.innerHeight;
+
+      var mouseOffset = parseInt(ContextUtil.getProperty(options, 'mouse_offset', 2));
+
+      if ((windowWidth - clickCoordsX) < menuWidth) {
+        menu.style.left = windowWidth - menuWidth + 'px';
+      } else {
+        menu.style.left = (clickCoordsX + mouseOffset) + 'px';
+      }
+
+      if ((windowHeight - clickCoordsY) < menuHeight) {
+        menu.style.top = windowHeight - menuHeight + 'px';
+      } else {
+        menu.style.top = (clickCoordsY + mouseOffset) + 'px';
+      }
+
+      var sizes = ContextUtil.getSizes(menu);
+
+      if ((windowWidth - clickCoordsX) < sizes.width) {
+        menu.classList.add('cm_border_right');
+      } else {
+        menu.classList.remove('cm_border_right');
+      }
+
+      if ((windowHeight - clickCoordsY) < sizes.height) {
+        menu.classList.add('cm_border_bottom');
+      } else {
+        menu.classList.remove('cm_border_bottom');
+      }
+
+      menu.classList.add('display');
+
+      if (ContextUtil.getProperty(options, 'close_on_click', true)) {
+        window.addEventListener('click', documentClick);
+      }
+
+      e.preventDefault();
+    };
+
+    this.hide = function () {
+      document.getElementById('cm_' + num).classList.remove('display');
+      window.removeEventListener('click', documentClick);
+    };
+
+    function documentClick() {
+      self.hide();
+    }
+
+    this.reload();
+  }
+
+  ContextMenu.count = 0;
+  ContextMenu.DIVIDER = 'cm_divider';
+
+  const ContextUtil = {
+    getProperty: function (options, opt, def) {
+      if (typeof options[opt] !== 'undefined') {
+        return options[opt];
+      }
+      return def;
+
+    },
+
+    getSizes: function (obj) {
+      var lis = obj.getElementsByTagName('li');
+
+      var width_def = 0;
+      var height_def = 0;
+
+      for (var i = 0; i < lis.length; i++) {
+        var li = lis[i];
+
+        if (li.offsetWidth > width_def) {
+          width_def = li.offsetWidth;
+        }
+
+        if (li.offsetHeight > height_def) {
+          height_def = li.offsetHeight;
+        }
+      }
+
+      var width = width_def;
+      var height = height_def;
+
+      for (var i = 0; i < lis.length; i++) {
+        var li = lis[i];
+
+        var ul = li.getElementsByTagName('ul');
+        if (typeof ul[0] !== 'undefined') {
+          var ul_size = ContextUtil.getSizes(ul[0]);
+
+          if (width_def + ul_size.width > width) {
+            width = width_def + ul_size.width;
+          }
+
+          if (height_def + ul_size.height > height) {
+            height = height_def + ul_size.height;
+          }
+        }
+      }
+
+      return {
+        width: width,
+        height: height
+      };
+    }
+  };
+
+  var ContextMenu_1 = ContextMenu;
+
+  var contextmenu = {
+  	ContextMenu: ContextMenu_1
+  };
+
+  //const { Swal } = require("../../../library/sweetalert2.all.min");
+
+  function alert(msg) {
+    Swal.fire(msg);
+  }
+
+  /*
+  const { value: text } = await Swal.fire({
+    input: 'textarea',
+    inputLabel: 'Message',
+    inputPlaceholder: 'Type your message here...',
+    inputAttributes: {
+      'aria-label': 'Type your message here'
+    },
+    showCancelButton: true
+  })
+
+  if (text) {
+    Swal.fire(text)
+  }
+  */
+  async function readline(label, placeholder, showcancel) {
+    const text = await Swal.fire({
+      input: 'text',
+      inputLabel: label,
+      inputPlaceholder: placeholder,
+      inputAttributes: {
+        'aria-label': placeholder
+      },
+      showCancelButton: showcancel
+    });
+    return text;
+  }
+
+  var alert_1 = alert;
+  var readline_1 = readline;
+
+  var dialog = {
+  	alert: alert_1,
+  	readline: readline_1
+  };
+
   var rows = [];
   var search = document.getElementById('search');
   var ele$1 = document.getElementById('explorer_container');
+
 
 
   /* Fill array with data
@@ -12119,14 +12457,99 @@ var diagram = (function () {
 
   var onSearch = func_onSearch;
 
-  document.getElementById('contentArea').onclick = function (e) {
+  var eletb = document.getElementById('contentArea');
+
+  eletb.onclick = function (e) {
     var target = e.target;
     if (target.nodeName !== 'TD') return;
     model.set_active_document(target.parentElement.firstElementChild.innerText);
   };
 
+  //ondblclick
+
+  var name = '';
+  eletb.oncontextmenu = function (e) {
+    var target = e.target;
+    if (target.nodeName !== 'TD') return;
+    name = target.parentElement.firstElementChild.innerText;
+    //console.log(target.parentElement.firstElementChild.innerText);
+  };
+
   search.oninput = onSearch;
 
+
+
+
+  function set_attr$1(name, val) {
+    ele$1.style[name] = val;
+  }
+
+  var menu$1;
+  var cmen$1 = [
+    {
+      text: 'New',
+      events: {
+        click: async function () {
+          let n = await dialog.readline('Please input name', 'file name', true);
+          if (n) {
+            model.update_document(n.value, '');
+          }
+        }
+      }
+    },
+    {
+      text: 'Delete',
+      events: {
+        click: function () {
+          //var target = e.target;
+          //if (target.nodeName !== 'TD') return;
+          //let name = target.parentElement.firstElementChild.innerText;
+          model.delete_document(name);
+          dialog.alert('Node ' + name + ' deleted!');
+        }
+      }
+    },
+    {
+      text: 'Rename',
+      events: {
+        click: async function () {
+          let n = await dialog.readline('Rename ' + name + ' to:', 'target file name', true);
+          if (n) {
+            model.rename_document(name, n.value);
+          }
+        }
+      }
+    },
+    {
+      type: contextmenu.ContextMenu.DIVIDER
+    },
+    {
+      text: 'Import DB',
+      events: {
+        click: function (e) {
+          var target = e.target;
+          if (target.nodeName !== 'TD') return;
+          console.log(target.parentElement.firstElementChild.innerText);
+        }
+      }
+    },
+    {
+      text: 'Export DB',
+      events: {
+        click: function (e) {
+          var target = e.target;
+          if (target.nodeName !== 'TD') return;
+          console.log(target.parentElement.firstElementChild.innerText);
+        }
+      }
+    }
+  ];
+
+  menu$1 = new contextmenu.ContextMenu(cmen$1);
+
+  eletb.addEventListener('contextmenu', function (e) {
+    menu$1.display(e);
+  });
 
   model.on('DOCUMENT-UPDATE', () => {
     build_data();
@@ -12138,9 +12561,10 @@ var diagram = (function () {
     clusterize.update(filterRows(rows));
   });
 
-  function set_attr$1(name, val) {
-    ele$1.style[name] = val;
-  }
+  model.on('DOCUMENT-RENAME', () => {
+    build_data();
+    clusterize.update(filterRows(rows));
+  });
 
   var set_attr_1$1 = set_attr$1;
 
@@ -23628,9 +24052,383 @@ var diagram = (function () {
   });
   });
 
+  var foldcode = createCommonjsModule(function (module, exports) {
+  // CodeMirror, copyright (c) by Marijn Haverbeke and others
+  // Distributed under an MIT license: https://codemirror.net/LICENSE
+
+  (function(mod) {
+    mod(codemirror);
+  })(function(CodeMirror) {
+
+    function doFold(cm, pos, options, force) {
+      if (options && options.call) {
+        var finder = options;
+        options = null;
+      } else {
+        var finder = getOption(cm, options, "rangeFinder");
+      }
+      if (typeof pos == "number") pos = CodeMirror.Pos(pos, 0);
+      var minSize = getOption(cm, options, "minFoldSize");
+
+      function getRange(allowFolded) {
+        var range = finder(cm, pos);
+        if (!range || range.to.line - range.from.line < minSize) return null;
+        if (force === "fold") return range;
+
+        var marks = cm.findMarksAt(range.from);
+        for (var i = 0; i < marks.length; ++i) {
+          if (marks[i].__isFold) {
+            if (!allowFolded) return null;
+            range.cleared = true;
+            marks[i].clear();
+          }
+        }
+        return range;
+      }
+
+      var range = getRange(true);
+      if (getOption(cm, options, "scanUp")) while (!range && pos.line > cm.firstLine()) {
+        pos = CodeMirror.Pos(pos.line - 1, 0);
+        range = getRange(false);
+      }
+      if (!range || range.cleared || force === "unfold") return;
+
+      var myWidget = makeWidget(cm, options, range);
+      CodeMirror.on(myWidget, "mousedown", function(e) {
+        myRange.clear();
+        CodeMirror.e_preventDefault(e);
+      });
+      var myRange = cm.markText(range.from, range.to, {
+        replacedWith: myWidget,
+        clearOnEnter: getOption(cm, options, "clearOnEnter"),
+        __isFold: true
+      });
+      myRange.on("clear", function(from, to) {
+        CodeMirror.signal(cm, "unfold", cm, from, to);
+      });
+      CodeMirror.signal(cm, "fold", cm, range.from, range.to);
+    }
+
+    function makeWidget(cm, options, range) {
+      var widget = getOption(cm, options, "widget");
+
+      if (typeof widget == "function") {
+        widget = widget(range.from, range.to);
+      }
+
+      if (typeof widget == "string") {
+        var text = document.createTextNode(widget);
+        widget = document.createElement("span");
+        widget.appendChild(text);
+        widget.className = "CodeMirror-foldmarker";
+      } else if (widget) {
+        widget = widget.cloneNode(true);
+      }
+      return widget;
+    }
+
+    // Clumsy backwards-compatible interface
+    CodeMirror.newFoldFunction = function(rangeFinder, widget) {
+      return function(cm, pos) { doFold(cm, pos, {rangeFinder: rangeFinder, widget: widget}); };
+    };
+
+    // New-style interface
+    CodeMirror.defineExtension("foldCode", function(pos, options, force) {
+      doFold(this, pos, options, force);
+    });
+
+    CodeMirror.defineExtension("isFolded", function(pos) {
+      var marks = this.findMarksAt(pos);
+      for (var i = 0; i < marks.length; ++i)
+        if (marks[i].__isFold) return true;
+    });
+
+    CodeMirror.commands.toggleFold = function(cm) {
+      cm.foldCode(cm.getCursor());
+    };
+    CodeMirror.commands.fold = function(cm) {
+      cm.foldCode(cm.getCursor(), null, "fold");
+    };
+    CodeMirror.commands.unfold = function(cm) {
+      cm.foldCode(cm.getCursor(), { scanUp: false }, "unfold");
+    };
+    CodeMirror.commands.foldAll = function(cm) {
+      cm.operation(function() {
+        for (var i = cm.firstLine(), e = cm.lastLine(); i <= e; i++)
+          cm.foldCode(CodeMirror.Pos(i, 0), { scanUp: false }, "fold");
+      });
+    };
+    CodeMirror.commands.unfoldAll = function(cm) {
+      cm.operation(function() {
+        for (var i = cm.firstLine(), e = cm.lastLine(); i <= e; i++)
+          cm.foldCode(CodeMirror.Pos(i, 0), { scanUp: false }, "unfold");
+      });
+    };
+
+    CodeMirror.registerHelper("fold", "combine", function() {
+      var funcs = Array.prototype.slice.call(arguments, 0);
+      return function(cm, start) {
+        for (var i = 0; i < funcs.length; ++i) {
+          var found = funcs[i](cm, start);
+          if (found) return found;
+        }
+      };
+    });
+
+    CodeMirror.registerHelper("fold", "auto", function(cm, start) {
+      var helpers = cm.getHelpers(start, "fold");
+      for (var i = 0; i < helpers.length; i++) {
+        var cur = helpers[i](cm, start);
+        if (cur) return cur;
+      }
+    });
+
+    var defaultOptions = {
+      rangeFinder: CodeMirror.fold.auto,
+      widget: "\u2194",
+      minFoldSize: 0,
+      scanUp: false,
+      clearOnEnter: true
+    };
+
+    CodeMirror.defineOption("foldOptions", null);
+
+    function getOption(cm, options, name) {
+      if (options && options[name] !== undefined)
+        return options[name];
+      var editorOptions = cm.options.foldOptions;
+      if (editorOptions && editorOptions[name] !== undefined)
+        return editorOptions[name];
+      return defaultOptions[name];
+    }
+
+    CodeMirror.defineExtension("foldOption", function(options, name) {
+      return getOption(this, options, name);
+    });
+  });
+  });
+
+  createCommonjsModule(function (module, exports) {
+  // CodeMirror, copyright (c) by Marijn Haverbeke and others
+  // Distributed under an MIT license: https://codemirror.net/LICENSE
+
+  (function(mod) {
+    mod(codemirror, foldcode);
+  })(function(CodeMirror) {
+
+    CodeMirror.defineOption("foldGutter", false, function(cm, val, old) {
+      if (old && old != CodeMirror.Init) {
+        cm.clearGutter(cm.state.foldGutter.options.gutter);
+        cm.state.foldGutter = null;
+        cm.off("gutterClick", onGutterClick);
+        cm.off("changes", onChange);
+        cm.off("viewportChange", onViewportChange);
+        cm.off("fold", onFold);
+        cm.off("unfold", onFold);
+        cm.off("swapDoc", onChange);
+      }
+      if (val) {
+        cm.state.foldGutter = new State(parseOptions(val));
+        updateInViewport(cm);
+        cm.on("gutterClick", onGutterClick);
+        cm.on("changes", onChange);
+        cm.on("viewportChange", onViewportChange);
+        cm.on("fold", onFold);
+        cm.on("unfold", onFold);
+        cm.on("swapDoc", onChange);
+      }
+    });
+
+    var Pos = CodeMirror.Pos;
+
+    function State(options) {
+      this.options = options;
+      this.from = this.to = 0;
+    }
+
+    function parseOptions(opts) {
+      if (opts === true) opts = {};
+      if (opts.gutter == null) opts.gutter = "CodeMirror-foldgutter";
+      if (opts.indicatorOpen == null) opts.indicatorOpen = "CodeMirror-foldgutter-open";
+      if (opts.indicatorFolded == null) opts.indicatorFolded = "CodeMirror-foldgutter-folded";
+      return opts;
+    }
+
+    function isFolded(cm, line) {
+      var marks = cm.findMarks(Pos(line, 0), Pos(line + 1, 0));
+      for (var i = 0; i < marks.length; ++i) {
+        if (marks[i].__isFold) {
+          var fromPos = marks[i].find(-1);
+          if (fromPos && fromPos.line === line)
+            return marks[i];
+        }
+      }
+    }
+
+    function marker(spec) {
+      if (typeof spec == "string") {
+        var elt = document.createElement("div");
+        elt.className = spec + " CodeMirror-guttermarker-subtle";
+        return elt;
+      } else {
+        return spec.cloneNode(true);
+      }
+    }
+
+    function updateFoldInfo(cm, from, to) {
+      var opts = cm.state.foldGutter.options, cur = from - 1;
+      var minSize = cm.foldOption(opts, "minFoldSize");
+      var func = cm.foldOption(opts, "rangeFinder");
+      // we can reuse the built-in indicator element if its className matches the new state
+      var clsFolded = typeof opts.indicatorFolded == "string" && classTest(opts.indicatorFolded);
+      var clsOpen = typeof opts.indicatorOpen == "string" && classTest(opts.indicatorOpen);
+      cm.eachLine(from, to, function(line) {
+        ++cur;
+        var mark = null;
+        var old = line.gutterMarkers;
+        if (old) old = old[opts.gutter];
+        if (isFolded(cm, cur)) {
+          if (clsFolded && old && clsFolded.test(old.className)) return;
+          mark = marker(opts.indicatorFolded);
+        } else {
+          var pos = Pos(cur, 0);
+          var range = func && func(cm, pos);
+          if (range && range.to.line - range.from.line >= minSize) {
+            if (clsOpen && old && clsOpen.test(old.className)) return;
+            mark = marker(opts.indicatorOpen);
+          }
+        }
+        if (!mark && !old) return;
+        cm.setGutterMarker(line, opts.gutter, mark);
+      });
+    }
+
+    // copied from CodeMirror/src/util/dom.js
+    function classTest(cls) { return new RegExp("(^|\\s)" + cls + "(?:$|\\s)\\s*") }
+
+    function updateInViewport(cm) {
+      var vp = cm.getViewport(), state = cm.state.foldGutter;
+      if (!state) return;
+      cm.operation(function() {
+        updateFoldInfo(cm, vp.from, vp.to);
+      });
+      state.from = vp.from; state.to = vp.to;
+    }
+
+    function onGutterClick(cm, line, gutter) {
+      var state = cm.state.foldGutter;
+      if (!state) return;
+      var opts = state.options;
+      if (gutter != opts.gutter) return;
+      var folded = isFolded(cm, line);
+      if (folded) folded.clear();
+      else cm.foldCode(Pos(line, 0), opts);
+    }
+
+    function onChange(cm) {
+      var state = cm.state.foldGutter;
+      if (!state) return;
+      var opts = state.options;
+      state.from = state.to = 0;
+      clearTimeout(state.changeUpdate);
+      state.changeUpdate = setTimeout(function() { updateInViewport(cm); }, opts.foldOnChangeTimeSpan || 600);
+    }
+
+    function onViewportChange(cm) {
+      var state = cm.state.foldGutter;
+      if (!state) return;
+      var opts = state.options;
+      clearTimeout(state.changeUpdate);
+      state.changeUpdate = setTimeout(function() {
+        var vp = cm.getViewport();
+        if (state.from == state.to || vp.from - state.to > 20 || state.from - vp.to > 20) {
+          updateInViewport(cm);
+        } else {
+          cm.operation(function() {
+            if (vp.from < state.from) {
+              updateFoldInfo(cm, vp.from, state.from);
+              state.from = vp.from;
+            }
+            if (vp.to > state.to) {
+              updateFoldInfo(cm, state.to, vp.to);
+              state.to = vp.to;
+            }
+          });
+        }
+      }, opts.updateViewportTimeSpan || 400);
+    }
+
+    function onFold(cm, from) {
+      var state = cm.state.foldGutter;
+      if (!state) return;
+      var line = from.line;
+      if (line >= state.from && line < state.to)
+        updateFoldInfo(cm, line, line + 1);
+    }
+  });
+  });
+
+  createCommonjsModule(function (module, exports) {
+  // CodeMirror, copyright (c) by Marijn Haverbeke and others
+  // Distributed under an MIT license: https://codemirror.net/LICENSE
+
+  (function(mod) {
+    mod(codemirror);
+  })(function(CodeMirror) {
+
+  function lineIndent(cm, lineNo) {
+    var text = cm.getLine(lineNo);
+    var spaceTo = text.search(/\S/);
+    if (spaceTo == -1 || /\bcomment\b/.test(cm.getTokenTypeAt(CodeMirror.Pos(lineNo, spaceTo + 1))))
+      return -1
+    return CodeMirror.countColumn(text, null, cm.getOption("tabSize"))
+  }
+
+  CodeMirror.registerHelper("fold", "indent", function(cm, start) {
+    var myIndent = lineIndent(cm, start.line);
+    if (myIndent < 0) return
+    var lastLineInFold = null;
+
+    // Go through lines until we find a line that definitely doesn't belong in
+    // the block we're folding, or to the end.
+    for (var i = start.line + 1, end = cm.lastLine(); i <= end; ++i) {
+      var indent = lineIndent(cm, i);
+      if (indent == -1) ; else if (indent > myIndent) {
+        // Lines with a greater indent are considered part of the block.
+        lastLineInFold = i;
+      } else {
+        // If this line has non-space, non-comment content, and is
+        // indented less or equal to the start line, it is the start of
+        // another block.
+        break;
+      }
+    }
+    if (lastLineInFold) return {
+      from: CodeMirror.Pos(start.line, cm.getLine(start.line).length),
+      to: CodeMirror.Pos(lastLineInFold, cm.getLine(lastLineInFold).length)
+    };
+  });
+
+  });
+  });
+
+  /*
+  <link  href="../addon/fold/foldgutter.css" rel="stylesheet" />
+  <script src="../addon/fold/foldcode.js"></script>
+  <script src="../addon/fold/foldgutter.js"></script>
+  <script src="../addon/fold/indent-fold.js"></script>
+  */
+  //require('codemirror/addon/fold/foldgutter.css');
+
+
+
+
+
   var source = codemirror.fromTextArea(document.getElementById('source'), {
     mode: 'markdown',
-    lineNumbers: true
+    lineNumbers: true,
+    foldGutter: true,
+    gutters: [ 'CodeMirror-linenumbers', 'CodeMirror-foldgutter' ]
   });
 
   var ele = document.getElementById('src');
@@ -23838,6 +24636,7 @@ var diagram = (function () {
 
 
 
+
   //all the node with a toolbar entry.
   let widgets = new Set();
   let container_ele = null;
@@ -23853,7 +24652,7 @@ var diagram = (function () {
     }
   }
 
-  function add_button(name, label, cb) {
+  function add_button(name, label, cb, system) {
     //add button DOM and listener
     name += '__TOOLBAR__';
     if (!widgets.has(name)) {
@@ -23863,7 +24662,9 @@ var diagram = (function () {
       childNode.id = name;
       container_ele.appendChild(childNode);
       childNode.addEventListener('click', cb);
-      widgets.add(name);
+      if (!system) {
+        widgets.add(name);
+      }
     }
   }
 
@@ -23874,8 +24675,8 @@ var diagram = (function () {
   */
 
 
-  function rm_cb() {
-    let name = model.get_active_document();
+  function rm_cb(name) {
+    name = name || model.get_active_document();
     let org_name = name;
     name += '__TOOLBAR__';
     if (widgets.has(name)) {
@@ -23902,6 +24703,17 @@ var diagram = (function () {
     model.set_config('buttons', conf);
   }
 
+  function cleanup() {
+    let names = model.get_all_names();
+    for (let id of widgets) {
+      id = id.substring(0, id.length - '__TOOLBAR__'.length);
+      if (!(id in names)) {
+        rm_cb(id);
+      }
+    }
+
+  }
+
   function exe_cb() {
     let name = model.get_active_document();
     let cmds = model.get_common_attr(name, 'commands');
@@ -23914,9 +24726,9 @@ var diagram = (function () {
     //exe active node
     //add button
     //remove button
-    add_button('__SYSTEM_EXE', 'Execute', exe_cb);
-    add_button('__SYSTEM_ADD', 'Add Button', add_cb);
-    add_button('__SYSTEM_REMOVE', 'Remove Button', rm_cb);
+    add_button('__SYSTEM_EXE', 'Execute', exe_cb, true);
+    //add_button('__SYSTEM_ADD', 'Add Button', add_cb, true);
+    //add_button('__SYSTEM_REMOVE', 'Remove Button', rm_cb, true);
   }
 
   function config() {
@@ -23927,19 +24739,61 @@ var diagram = (function () {
     }
   }
 
+
+
+  var menu;
+  var cmen = [
+    {
+      text: 'Add Current Node Button',
+      events: {
+        click: function () {
+          //var target = e.target;
+          //cleanup();
+          add_cb();
+        }
+      }
+    },
+    {
+      text: 'Remove Button',
+      events: {
+        click: function () {
+          //var target = e.target;
+          //cleanup();
+          rm_cb();
+        }
+      }
+    },
+    {
+      text: 'Clean Empty Menu Item',
+      events: {
+        click: function () {
+          //var target = e.target;
+          cleanup();
+        }
+      }
+    }
+  ];
+
+  menu = new contextmenu.ContextMenu(cmen);
+
   function init(container) {
     container_ele = document.getElementById(container);
     //add function buttons
     add_tools();
+    container_ele.addEventListener('contextmenu', function (e) {
+      menu.display(e);
+    });
     return container_ele;
   }
 
   var init_1 = init;
   var config_1 = config;
+  var cleanup_1 = cleanup;
 
   var toolbar = {
   	init: init_1,
-  	config: config_1
+  	config: config_1,
+  	cleanup: cleanup_1
   };
 
   //const { default: nodeResolve } = require('@rollup/plugin-node-resolve');
