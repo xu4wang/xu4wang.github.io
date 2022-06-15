@@ -4014,28 +4014,30 @@ var diagram = (function () {
       console.error('Payload should be an object');
       return false;
     }
-    //there is no event subscribed
+    /*   //there is no event subscribed
     if (!events.hasOwnProperty(eventName)) {
       //console.error(`Event "${eventName}" does not exists`);
 
       store = Object.assign({}, store, payload);
       return false;  //we can still EMIT
     }
-
+   */
     //update store, with the payload, or the processed data (of payload func)
     store = Object.assign({}, store, payload);
-    events[eventName].forEach(({ dep, cb }) => {
-      if (dep.length === 0) cb(store);
-      else {
-        //dep is the parameters the cb needed.
-        const t = {};
-        dep.forEach((k) => {
-          if (store.hasOwnProperty(k)) t[k] = store[k];
-        });
-        //call cb with the generated parameters
-        cb(t);
-      }
-    });
+    if (events.hasOwnProperty(eventName)) {
+      events[eventName].forEach(({ dep, cb }) => {
+        if (dep.length === 0) cb(store);
+        else {
+          //dep is the parameters the cb needed.
+          const t = {};
+          dep.forEach((k) => {
+            if (store.hasOwnProperty(k)) t[k] = store[k];
+          });
+          //call cb with the generated parameters
+          cb(t);
+        }
+      });
+    }
     return true;
   }
 
@@ -4080,6 +4082,17 @@ var diagram = (function () {
   	get_store: get_store_1,
   	reset_listener: reset_listener_1
   };
+
+  const default_name = '#default_diagram';
+  const frontpage = 'index';
+
+  var notes_name = default_name;
+
+  let config_file = 'diagram.system.configuration';
+
+  //eslint-disable-next-line
+  let default_b64 = 'eyJpbmRleCI6Ii0tLVxuc3R5bGU6IHt9XG5ub2RlczogW11cbmVkZ2VzOiBbXVxuLS0tXG5cblRoaXMgaXMgYW4gZW1wdHkgbm90ZXMuIiwiZGlhZ3JhbS5zeXN0ZW0uY29uZmlndXJhdGlvbiI6Ii0tLVxuc3R5bGU6IHt9XG5ub2RlczogW11cbmVkZ2VzOiBbXVxuYnV0dG9uczpcbiAgLSBicm93c2luZ1xuICAtIG5vdGUgdGFraW5nXG4gIC0gY2FudmFzIG9ubHlcbmtlZXA6XG4gIC0gZGlhZ3JhbS5zeXN0ZW0uY29uZmlndXJhdGlvblxuICAtIG5vdGUgdGFraW5nXG4gIC0gY2FudmFzIG9ubHlcbiAgLSBicm93c2luZ1xuLS0tXG5cbkNvbmZpZ3VyYXRpb24gRGF0YVxuIiwibm90ZSB0YWtpbmciOiItLS1cbm5hbWU6IG5vdGUgdGFraW5nXG5ub3RlOiBjb25maWdcbnN0eWxlOiB7fVxubm9kZXM6IFtdXG5lZGdlczogW11cbmNvbW1hbmRzOlxuICAtIG5hbWU6IHRoZW1lXG4gICAgYXJndjpcbiAgICAgIGV4cGxvcmVyOlxuICAgICAgICB3aWR0aDogMCVcbiAgICAgIGVkaXRvcjpcbiAgICAgICAgd2lkdGg6IDUwdndcbi0tLSIsImNhbnZhcyBvbmx5IjoiLS0tXG5ub3RlOiBjb25maWdcbnN0eWxlOiB7fVxubm9kZXM6IFtdXG5lZGdlczogW11cbmNvbW1hbmRzOlxuICAtIG5hbWU6IHRoZW1lXG4gICAgYXJndjpcbiAgICAgIGV4cGxvcmVyOlxuICAgICAgICB3aWR0aDogMCVcbiAgICAgIGVkaXRvcjpcbiAgICAgICAgd2lkdGg6IDAlXG4tLS1cblxuQ2FudmFzIE9ubHkgVmlldyIsImJyb3dzaW5nIjoiLS0tXG5ub3RlOiBjb25maWdcbnN0eWxlOiB7fVxubm9kZXM6IFtdXG5lZGdlczogW11cbmNvbW1hbmRzOlxuICAtIG5hbWU6IHRoZW1lXG4gICAgYXJndjpcbiAgICAgIGV4cGxvcmVyOlxuICAgICAgICB3aWR0aDogNTAlXG4gICAgICBlZGl0b3I6XG4gICAgICAgIHdpZHRoOiA1MCVcbi0tLVxuXG5DYW52YXMgT25seSBWaWV3In0=';
+
 
   state.init({
     active: null,   //name of current active node
@@ -4170,22 +4183,6 @@ var diagram = (function () {
     return { impacted: name, documents: docs };
   }
 
-  //  store.emit('ACTIVE-DOCUMENT', () => ({ active : name }));
-  function update_document(name, content) {
-    name = String(name);
-    state.emit('DOCUMENT-UPDATE', ({ impacted, documents }) => (_update_document(impacted, documents, name, content)));
-  }
-
-  function get_subnode_names(id) {
-    var diagram_documents = state.get_store().documents;
-    if (diagram_documents[id]) {
-      if (diagram_documents[id].json.nodes) {
-        return diagram_documents[id].json.nodes;
-      }
-    }
-    return [];
-  }
-
   function get_document_content(id) {
     var diagram_documents = state.get_store().documents;
     if (diagram_documents[id]) {
@@ -4196,53 +4193,6 @@ var diagram = (function () {
       return ret + diagram_documents[id].body;
     }
     return '';
-  }
-
-  function get_document_body(id) {
-    var diagram_documents = state.get_store().documents;
-
-    if (diagram_documents[id]) {
-      return diagram_documents[id].body;
-    }
-    return '';
-  }
-
-  function set_active_document(name) {
-    state.emit('ACTIVE-DOCUMENT', () => ({ active : name }));
-  }
-
-  function get_active_document() {
-    return state.get_store().active;
-  }
-
-  function get_impacted_document() {
-    return state.get_store().impacted;
-  }
-
-  function init_from_permlink(b64) {
-    //init from b64 data
-    //reset store
-    state.emit('RESET', () => ({
-      active: null,
-      documents: {}
-    }));
-
-    try {
-      var obj_str = base64.decode(b64);
-      var obj = JSON.parse(obj_str);
-      if (obj) {
-        for (let n in obj) {
-          if (obj.hasOwnProperty(n)) {
-            update_document(n, obj[n]);
-          }
-        }
-      } else {
-        return false;
-      }
-    } catch (error) {
-      return false;
-    }
-    return true;
   }
 
   function build_permlink() {
@@ -4258,6 +4208,56 @@ var diagram = (function () {
     return base64.encode(obj_str);
   }
 
+
+  function update_storage() {
+    window.localStorage.setItem(notes_name, build_permlink());
+  }
+
+  //  store.emit('ACTIVE-DOCUMENT', () => ({ active : name }));
+  function update_document(name, content) {
+    name = String(name);
+    state.emit('DOCUMENT-UPDATE', ({ impacted, documents }) => (_update_document(impacted, documents, name, content)));
+    update_storage();
+  }
+
+  function get_subnode_names(id) {
+    var diagram_documents = state.get_store().documents;
+    if (diagram_documents[id]) {
+      if (diagram_documents[id].json.nodes) {
+        return diagram_documents[id].json.nodes;
+      }
+    }
+    return [];
+  }
+
+
+  function get_document_body(id) {
+    var diagram_documents = state.get_store().documents;
+
+    if (diagram_documents[id]) {
+      return diagram_documents[id].body;
+    }
+    return '';
+  }
+
+  function set_active_document(name) {
+    state.emit('ACTIVE-DOCUMENT', () => ({ active : name }));
+    //check if it's a notes package???
+    if (localStorage.getItem(name) !== null) {
+      //open the note pacakge named target_doc
+      // eslint-disable-next-line no-use-before-define
+      reset(name);
+    }
+  }
+
+  function get_active_document() {
+    return state.get_store().active;
+  }
+
+  function get_impacted_document() {
+    return state.get_store().impacted;
+  }
+
   function get_document_obj(id) {
     var documents = state.get_store().documents;
     if (!documents[id]) {
@@ -4271,11 +4271,13 @@ var diagram = (function () {
     //update yaml accordingly
     var obj = get_document_obj(id)['style'];
     obj[key] = value;
+    update_storage();
   }
 
   function set_common_attr(id, key, value) {
     var obj = get_document_obj(id);
     obj[key] = value;
+    update_storage();
   }
 
   function get_attr(id, key) {
@@ -4331,7 +4333,7 @@ var diagram = (function () {
     for (let d in docs) {
       if (docs.hasOwnProperty(d)) {
         ret.add(d);
-        /*
+        /* subnode will not be added automatically.
         for (let s of get_subnode_names(d)) {
           ret.add(s);
         }
@@ -4345,7 +4347,6 @@ var diagram = (function () {
     return ret2;
   }
 
-  let config_file = 'diagram.system.configuration';
 
   function get_config(key) {
     return get_common_attr(config_file, key);
@@ -4354,19 +4355,47 @@ var diagram = (function () {
   function set_config(key, value) {
     set_common_attr(config_file, key, value);
     state.emit('DOCUMENT-UPDATE', () => ({}));
+    update_storage();
   }
 
   function rename_document(src, target) {
     state.emit('DOCUMENT-RENAME', (s) => {
+      if (localStorage.getItem(src) !== null) {
+        let v = localStorage.getItem(src);
+        if (target.charAt(0) !== '#') {
+          target = '#' + target;
+        }
+        localStorage.setItem(target, v);
+        if (src !== default_name) {
+          localStorage.removeItem(src); //always remove
+        }
+        //dialog.alert('Notes Pacakge ' + name + ' also renamed!');
+      }
       s.documents[target] = s.documents[src];
-      delete s.documents[src];
+      let keep = get_common_attr(config_file, 'keep');
+      if (keep instanceof Array) {
+        if (!(get_common_attr(config_file, 'keep').includes(src))) {
+          delete s.documents[src];
+        }
+      }
+      update_storage();
       return s;
     });
   }
 
   function delete_document(name) {
     state.emit('DOCUMENT-DELETE', (s) => {
-      delete s.documents[name];
+      let keep = get_common_attr(config_file, 'keep');
+      if (keep instanceof Array) {
+        if (!(get_common_attr(config_file, 'keep').includes(name))) {
+          delete s.documents[name];
+          s.impacted = name;
+        }
+      }
+      if (name !== default_name) {
+        localStorage.removeItem(name); //always remove
+      }
+      update_storage();
       return s;
     });
   }
@@ -4376,15 +4405,113 @@ var diagram = (function () {
     return name in docs;
   }
 
-  function reset() {
-    state.emit('RESET', () => ({
-      active: null,
-      documents: {}
-    }));
+
+  function allocation_name() {
+    let current = new Date();
+    let cDate = current.getFullYear() + '_' + (current.getMonth() + 1) + '_' + current.getDate();
+    let cTime = current.getHours() + '_' + current.getMinutes() + '_' + current.getSeconds();
+    let dateTime = '#' + cDate + '_' + cTime;
+    return dateTime;
   }
 
+  function init_from_permlink(b64) {
+    try {
+      var obj_str = base64.decode(b64);
+      var obj = JSON.parse(obj_str);
+      if (obj) {
+        for (let n in obj) {
+          if (obj.hasOwnProperty(n)) {
+            update_document(n, obj[n]);
+          }
+        }
+      } else {
+        return false;
+      }
+    } catch (error) {
+      return false;
+    }
+    return true;
+  }
+
+  function format(hard) {
+    if (hard) {
+      state.reset_listener();
+    }
+    state.emit('FORMAT', { documents: {} });
+  }
+
+  //name is the new name after reset
+  /*
+
+  1. ('', false) : open default notes
+  2. ('name',false) : open name, if not available, init it using default b64 data.
+  3. ('name', 'b64 data') : assign b64 data to name in localStorage, and open name.
+  4. ('', 'b64 data') : allocate a name and assign b64 data, open it.
+
+  */
+  function reset(name, b64) {
+    let notes_data = '';
+    state.emit('RESET', {});
+    format();
+
+    name = name || '';
+
+    if (name === '') {
+      if (b64) {
+        //case #4
+        notes_name = allocation_name();
+        notes_data = b64;
+      } else {
+        //case #1
+        notes_name = default_name;  //use default name;
+        notes_data = window.localStorage.getItem(notes_name);
+      }
+    } else {
+      //name is not blank, #2 or #3
+      notes_name = name;
+      if (b64) {
+        notes_data = b64;
+      } else {
+        notes_data = window.localStorage.getItem(name);
+      }
+    }
+    //make sure name starts with #
+    if (notes_name.charAt(0) !== '#') {
+      notes_name = '#' + notes_name;
+    }
+
+    //init and make sure notes_data is valid
+    if (!init_from_permlink(notes_data)) {
+      notes_data = default_b64;
+      init_from_permlink(notes_data);
+    }
+
+    //make sure we have config file, 'diagram.system.configuration'
+    let cf = get_config('keep');
+    if (cf === '') {
+      set_config('keep', [ config_file ]);
+    }
+
+    window.localStorage.setItem(notes_name, notes_data);
+    if (notes_name === default_name) {
+      //add all notes to the default note
+      for (let k of Object.keys(window.localStorage)) {
+        if (k !== default_name) {
+          update_document(k, 'Click to Open Notes');
+        }
+      }
+    }
+    set_active_document(frontpage);
+    state.emit('OPEN-NOTES', {});
+  }
+
+  function get_notes_name() {
+    return notes_name;
+  }
+
+
   var reset_1 = reset;
-  var init_from_permlink_1 = init_from_permlink;
+  //exports.init_from_permlink = init_from_permlink;
   var build_permlink_1 = build_permlink;
 
   var get_active_document_1 = get_active_document;
@@ -4413,18 +4540,22 @@ var diagram = (function () {
   var set_config_1 = set_config;
   var get_config_1 = get_config;
 
+  var get_notes_name_1 = get_notes_name;
+
+  var format_1 = format;
+
   /* support EVENTS
   'ACTIVE-DOCUMENT'
   'DOCUMENT-UPDATE'
   "DOCUMENT-DELETE"
   "DOCUMENT-RENAME"
   "DOCUMENT-CREATE"
-  'RESET'
+  ‘RESET’
+  ‘OPEN-NOTES’
   *****************/
 
   var model = {
   	reset: reset_1,
-  	init_from_permlink: init_from_permlink_1,
   	build_permlink: build_permlink_1,
   	get_active_document: get_active_document_1,
   	set_active_document: set_active_document_1,
@@ -4446,7 +4577,9 @@ var diagram = (function () {
   	on: on,
   	reset_listener: reset_listener,
   	set_config: set_config_1,
-  	get_config: get_config_1
+  	get_config: get_config_1,
+  	get_notes_name: get_notes_name_1,
+  	format: format_1
   };
 
   // List of valid entities
@@ -12381,12 +12514,25 @@ var diagram = (function () {
     return text;
   }
 
+  async function confirm(label, yes, no) {
+    let n = await Swal.fire({
+      title: label,
+      showDenyButton: true,
+      //showCancelButton: true,
+      confirmButtonText: yes || 'Yes',
+      denyButtonText: no || 'No'
+    });
+    return (n.isConfirmed);
+  }
+
   var alert_1 = alert;
   var readline_1 = readline;
+  var confirm_1 = confirm;
 
   var dialog = {
   	alert: alert_1,
-  	readline: readline_1
+  	readline: readline_1,
+  	confirm: confirm_1
   };
 
   var rows = [];
@@ -12459,10 +12605,12 @@ var diagram = (function () {
 
   var eletb = document.getElementById('contentArea');
 
-  eletb.onclick = function (e) {
+  eletb.onclick = async function (e) {
     var target = e.target;
     if (target.nodeName !== 'TD') return;
-    model.set_active_document(target.parentElement.firstElementChild.innerText);
+    let target_doc = target.parentElement.firstElementChild.innerText;
+    model.set_active_document(target_doc);
+
   };
 
   //ondblclick
@@ -12500,12 +12648,19 @@ var diagram = (function () {
     {
       text: 'Delete',
       events: {
-        click: function () {
+        click: async function () {
           //var target = e.target;
           //if (target.nodeName !== 'TD') return;
           //let name = target.parentElement.firstElementChild.innerText;
-          model.delete_document(name);
-          dialog.alert('Node ' + name + ' deleted!');
+          //check if there is a notes with this name, if yes, check if we need to process notes deletion.
+          if (localStorage.getItem(name) !== null) {
+            let del = await dialog.confirm('Delete Notes Pacakge: ' + name, 'Yes,delete', 'No, Keep it');
+            if (del) {
+              model.delete_document(name);
+            }
+          } else {
+            model.delete_document(name);
+          }
         }
       }
     },
@@ -12515,7 +12670,8 @@ var diagram = (function () {
         click: async function () {
           let n = await dialog.readline('Rename ' + name + ' to:', 'target file name', true);
           if (n) {
-            model.rename_document(name, n.value);
+            let new_name = n.value;
+            model.rename_document(name, new_name);
           }
         }
       }
@@ -12524,7 +12680,7 @@ var diagram = (function () {
       type: contextmenu.ContextMenu.DIVIDER
     },
     {
-      text: 'Import DB',
+      text: 'Import Notes',
       events: {
         click: function (e) {
           var target = e.target;
@@ -12534,7 +12690,7 @@ var diagram = (function () {
       }
     },
     {
-      text: 'Export DB',
+      text: 'Export Notes',
       events: {
         click: function (e) {
           var target = e.target;
@@ -12553,18 +12709,24 @@ var diagram = (function () {
 
   model.on('DOCUMENT-UPDATE', () => {
     build_data();
-    clusterize.update(filterRows(rows));
+    func_onSearch();
   });
 
   model.on('DOCUMENT-DELETE', () => {
     build_data();
-    clusterize.update(filterRows(rows));
+    func_onSearch();
   });
 
   model.on('DOCUMENT-RENAME', () => {
     build_data();
-    clusterize.update(filterRows(rows));
+    func_onSearch();
   });
+
+  model.on('OPEN-NOTES', () => {
+    build_data();
+    func_onSearch();
+  });
+
 
   var set_attr_1$1 = set_attr$1;
 
@@ -24461,53 +24623,28 @@ var diagram = (function () {
   	set_attr: set_attr_1
   };
 
-  var permalink    = document.getElementById('permalink');
-  var default_text = document.getElementById('source').value || '';
-
-  var diag_name = '#default_diagram';
-  var frontpage = 'index';
-
-  function update_permlink() {
-    var data =  model.build_permlink();
-    permalink.href = '#diag=' + data;
-    window.localStorage.setItem(diag_name, data);
-  }
-
-  function open_local_file(name) {
-    let d = window.localStorage.getItem(name);
-    if (d) {
-      model.init_from_permlink(d);
-    } else {
-      //diag_name = 'diagram';  //use default diag_name, it's already initialized.
-      model.update_document(frontpage, default_text);
-    }
-  }
-
   function open_document() {
-    if (location.hash && location.hash.toString().slice(0, 6) === '#diag=') {
-      //if there is data, try to load data first.
-      if (!model.init_from_permlink(location.hash.slice(6))) {
-        //load data failed, try to open local Storage with default key
-        diag_name = location.hash.toString().slice(0, 40);
-        open_local_file(diag_name);
+    if (location.hash) {
+      if (location.hash.toString().slice(0, 6) === '#diag=') {
+        //if there is data, try to load data first.
+        model.reset('', location.hash.slice(6));
+        window.location.hash = model.get_notes_name();
+      } else {
+        //hash is notes name
+        model.reset(location.hash.toString());
       }
-      //use default key for local storage
-      window.location.hash = diag_name;
     } else {
-      //diag_name += '.';
-      diag_name = location.hash.toString().slice(0, 40);
-      if (diag_name === '') {
-        diag_name = '#default_diagram';
-      }
-      open_local_file(diag_name);
-      window.location.hash = diag_name;
+      model.reset();
+      window.location.hash = model.get_notes_name();
     }
-    model.set_active_document(frontpage);
+    //m.set_active_document(frontpage);
   }
 
-  model.on('DOCUMENT-UPDATE', () => {
+  /*
+  m.on('DOCUMENT-UPDATE', () => {
     update_permlink();
   });
+  */
 
   var open_document_1 = open_document;
 
@@ -24637,9 +24774,12 @@ var diagram = (function () {
 
 
 
+
   //all the node with a toolbar entry.
   let widgets = new Set();
   let container_ele = null;
+  let notes_name_ele = null;
+  let doc_name_ele = null;
 
   //button.addEventListener('click', cb)
   function btn_listener(e) {
@@ -24647,24 +24787,31 @@ var diagram = (function () {
     //call commands
     id = id.substring(0, id.length - '__TOOLBAR__'.length);
     let cmds = model.get_common_attr(id, 'commands');
-    for (let cmd of cmds) {
-      commands_1.run(cmd.name, cmd.argv);
+    if (cmds) {
+      for (let cmd of cmds) {
+        commands_1.run(cmd.name, cmd.argv);
+      }
+    } else if (model.document_available(id)) {
+      model.set_active_document(id);
     }
   }
 
-  function add_button(name, label, cb, system) {
+  function add_button(name, label, cb, user) {
     //add button DOM and listener
     name += '__TOOLBAR__';
+    let classname = user;
     if (!widgets.has(name)) {
+      if (!user) {
+        classname = 'button-system';
+      } else {
+        widgets.add(name);
+      }
       var childNode = document.createElement('button');
       childNode.innerHTML = label;
-      childNode.className = 'button-32';
+      childNode.className = classname;
       childNode.id = name;
       container_ele.appendChild(childNode);
       childNode.addEventListener('click', cb);
-      if (!system) {
-        widgets.add(name);
-      }
     }
   }
 
@@ -24694,10 +24841,21 @@ var diagram = (function () {
     }
   }
 
+  function clear_all_cb() {
+    for (let name of widgets) {
+      widgets.delete(name);
+      //remove widget name from DOM
+      //name = name.substring(0, name.length - '__TOOLBAR__'.length);
+      let e = document.getElementById(name);
+      e.remove();
+      //e.parentNode.removeChild(e);
+    }
+  }
+
   function add_cb() {
     //create new button, add current node as listener
     let name = model.get_active_document();
-    add_button(name, name, btn_listener);
+    add_button(name, name, btn_listener, 'button-user');
     let conf = model.get_config('buttons') || [];
     conf.push(name);
     model.set_config('buttons', conf);
@@ -24721,12 +24879,16 @@ var diagram = (function () {
       commands_1.run(cmd.name, cmd.argv);
     }
   }
+  function exe_home() {
+    model.reset();
+  }
 
   function add_tools() {
     //exe active node
     //add button
     //remove button
-    add_button('__SYSTEM_EXE', 'Execute', exe_cb, true);
+    add_button('__SYSTEM_HOME', 'Home', exe_home, false);  //false means not a user button.
+    add_button('__SYSTEM_EXE', 'Execute', exe_cb, false);  //false means not a user button.
     //add_button('__SYSTEM_ADD', 'Add Button', add_cb, true);
     //add_button('__SYSTEM_REMOVE', 'Remove Button', rm_cb, true);
   }
@@ -24735,7 +24897,7 @@ var diagram = (function () {
     //add buttons based on document 'diagram.config'
     let conf = model.get_config('buttons') || [];
     for (let b of conf) {
-      add_button(b, b, btn_listener);
+      add_button(b, b, btn_listener, 'button-dark');
     }
   }
 
@@ -24778,6 +24940,14 @@ var diagram = (function () {
 
   function init(container) {
     container_ele = document.getElementById(container);
+    notes_name_ele = document.getElementById('notes_name');
+    doc_name_ele = document.getElementById('doc_name');
+    doc_name_ele.onclick = async function () {
+      let n = await dialog.readline('Please input file name to open', 'file name', true);
+      if (n) {
+        model.set_active_document(n.value);
+      }
+    };
     //add function buttons
     add_tools();
     container_ele.addEventListener('contextmenu', function (e) {
@@ -24785,6 +24955,24 @@ var diagram = (function () {
     });
     return container_ele;
   }
+
+  /*
+  'ACTIVE-DOCUMENT'
+  ‘OPEN-NOTES’
+  */
+
+  model.on('ACTIVE-DOCUMENT', () => {
+    doc_name_ele.innerHTML = model.get_active_document();
+  });
+
+  model.on('OPEN-NOTES', () => {
+    notes_name_ele.innerHTML = model.get_notes_name();
+    //change hash
+    window.location.hash = model.get_notes_name();
+    clear_all_cb();
+    config();
+  });
+
 
   var init_1 = init;
   var config_1 = config;
