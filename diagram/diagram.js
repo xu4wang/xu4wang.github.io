@@ -4069,14 +4069,14 @@ var diagram = (function () {
     events = {};
   }
 
-  var init_1$2 = init$2;
+  var init_1$1 = init$2;
   var emit_1 = emit;
   var on_1 = on$1;
   var get_store_1 = get_store;
   var reset_listener_1 = reset_listener$1;
 
   var state = {
-  	init: init_1$2,
+  	init: init_1$1,
   	emit: emit_1,
   	on: on_1,
   	get_store: get_store_1,
@@ -4211,6 +4211,11 @@ var diagram = (function () {
 
   function update_storage() {
     window.localStorage.setItem(notes_name, build_permlink());
+    state.emit('STORAGE_UPDATE', {});
+  }
+
+  function get_b64() {
+    return window.localStorage.getItem(notes_name);
   }
 
   //  store.emit('ACTIVE-DOCUMENT', () => ({ active : name }));
@@ -4509,6 +4514,9 @@ var diagram = (function () {
     return notes_name;
   }
 
+  function is_notes(name) {
+    return localStorage.getItem(name) !== null;
+  }
 
   var reset_1 = reset;
   //exports.init_from_permlink = init_from_permlink;
@@ -4544,6 +4552,9 @@ var diagram = (function () {
 
   var format_1 = format;
 
+  var get_b64_1 = get_b64;
+  var is_notes_1 = is_notes;
+
   /* support EVENTS
   'ACTIVE-DOCUMENT'
   'DOCUMENT-UPDATE'
@@ -4552,6 +4563,7 @@ var diagram = (function () {
   "DOCUMENT-CREATE"
   ‘RESET’
   ‘OPEN-NOTES’
+  STORAGE_UPDATE
   *****************/
 
   var model = {
@@ -4579,7 +4591,9 @@ var diagram = (function () {
   	set_config: set_config_1,
   	get_config: get_config_1,
   	get_notes_name: get_notes_name_1,
-  	format: format_1
+  	format: format_1,
+  	get_b64: get_b64_1,
+  	is_notes: is_notes_1
   };
 
   // List of valid entities
@@ -12100,7 +12114,8 @@ var diagram = (function () {
   //if the node is a function node.
   function add_node(model, name) {
     var l = model.get_subnode_names(name);
-    if (l.length === 0) {
+    var e = model.get_edges(name);
+    if (e.length === 0) {
       add_only_node(name, model.get_attrs(name), model.get_document_body(name));
     } else {
       for (let n of l) {
@@ -12109,7 +12124,7 @@ var diagram = (function () {
         }
         //add_node(model, n);
       }
-      edges.add_edges(model.get_edges(name));  //add edges here sine edges are part of node.
+      edges.add_edges(e);  //add edges here sine edges are part of node.
     }
   }
 
@@ -12126,8 +12141,9 @@ var diagram = (function () {
   	clear_nodes: clear_nodes_1
   };
 
-  var ele$2 = document.getElementById('dst');
+  var ele$3 = document.getElementById('dst');
 
+  let is_locked$1 = false;
 
   //retrieve the top/left parameters of each node, rebuild yaml
   function node_moved() {
@@ -12189,8 +12205,11 @@ var diagram = (function () {
 
   var current_doc = '';
 
+  function get_current_doc() {
+    return current_doc;
+  }
   model.on('ACTIVE-DOCUMENT', ({ active }) => {
-    if (window.j) {
+    if (window.j && !is_locked$1) {
       window.j.reset();
       node_1.add_node(model, active);
       current_doc = active;
@@ -12199,23 +12218,35 @@ var diagram = (function () {
 
   model.on('DOCUMENT-UPDATE', ({ impacted }) => {
     if (window.j) {
-      if (current_doc === impacted) {
+      if ((current_doc === impacted) && !is_locked$1) { //if not locked,update current doc
         window.j.reset();
         node_1.add_node(model, impacted);
       }
+      if (model.get_subnode_names(current_doc).includes(impacted)) { //regardless locked or not update in case a subnode is impacted.
+        window.j.reset();
+        node_1.add_node(model, current_doc);
+      }
     }
-  });
+  }
+  );
 
-  function set_attr$2(name, val) {
-    ele$2.style[name] = val;
+  function set_attr$3(name, val) {
+    ele$3.style[name] = val;
   }
 
-  var set_attr_1$2 = set_attr$2;
-  var init_1$1 = init$1;
+  function lock$1(status) {
+    is_locked$1 = status;
+  }
+  var set_attr_1$3 = set_attr$3;
+  var init_1 = init$1;
+  var lock_1$1 = lock$1;
+  var get_currect_doc = get_current_doc;
 
   var canvas = {
-  	set_attr: set_attr_1$2,
-  	init: init_1$1
+  	set_attr: set_attr_1$3,
+  	init: init_1,
+  	lock: lock_1$1,
+  	get_currect_doc: get_currect_doc
   };
 
   // https://github.com/m-thalmann/contextmenujs
@@ -12537,7 +12568,7 @@ var diagram = (function () {
 
   var rows = [];
   var search = document.getElementById('search');
-  var ele$1 = document.getElementById('explorer_container');
+  var ele$2 = document.getElementById('explorer_container');
 
 
 
@@ -12628,14 +12659,14 @@ var diagram = (function () {
 
 
 
-  function set_attr$1(name, val) {
-    ele$1.style[name] = val;
+  function set_attr$2(name, val) {
+    ele$2.style[name] = val;
   }
 
   var menu$1;
   var cmen$1 = [
     {
-      text: 'New',
+      text: 'New Node',
       events: {
         click: async function () {
           let n = await dialog.readline('Please input name', 'file name', true);
@@ -12646,14 +12677,14 @@ var diagram = (function () {
       }
     },
     {
-      text: 'Delete',
+      text: 'Delete Node',
       events: {
         click: async function () {
           //var target = e.target;
           //if (target.nodeName !== 'TD') return;
           //let name = target.parentElement.firstElementChild.innerText;
           //check if there is a notes with this name, if yes, check if we need to process notes deletion.
-          if (localStorage.getItem(name) !== null) {
+          if (model.is_notes(name)) {
             let del = await dialog.confirm('Delete Notes Pacakge: ' + name, 'Yes,delete', 'No, Keep it');
             if (del) {
               model.delete_document(name);
@@ -12665,12 +12696,13 @@ var diagram = (function () {
       }
     },
     {
-      text: 'Rename',
+      text: 'Rename Node',
       events: {
         click: async function () {
           let n = await dialog.readline('Rename ' + name + ' to:', 'target file name', true);
           if (n) {
             let new_name = n.value;
+            if (new_name === '') return;
             model.rename_document(name, new_name);
           }
         }
@@ -12678,7 +12710,8 @@ var diagram = (function () {
     },
     {
       type: contextmenu.ContextMenu.DIVIDER
-    },
+    }
+    /*,
     {
       text: 'Import Notes',
       events: {
@@ -12699,6 +12732,7 @@ var diagram = (function () {
         }
       }
     }
+    */
   ];
 
   menu$1 = new contextmenu.ContextMenu(cmen$1);
@@ -12728,10 +12762,10 @@ var diagram = (function () {
   });
 
 
-  var set_attr_1$1 = set_attr$1;
+  var set_attr_1$2 = set_attr$2;
 
   var explorer = {
-  	set_attr: set_attr_1$1
+  	set_attr: set_attr_1$2
   };
 
   var codemirror = createCommonjsModule(function (module, exports) {
@@ -24593,7 +24627,7 @@ var diagram = (function () {
     gutters: [ 'CodeMirror-linenumbers', 'CodeMirror-foldgutter' ]
   });
 
-  var ele = document.getElementById('src');
+  var ele$1 = document.getElementById('src');
 
   function document_changed() {
     var str, name;
@@ -24613,14 +24647,14 @@ var diagram = (function () {
     source.setValue(model.get_document_content(active));
   });
 
-  function set_attr(name, val) {
-    ele.style[name] = val;
+  function set_attr$1(name, val) {
+    ele$1.style[name] = val;
   }
 
-  var set_attr_1 = set_attr;
+  var set_attr_1$1 = set_attr$1;
 
   var editor = {
-  	set_attr: set_attr_1
+  	set_attr: set_attr_1$1
   };
 
   function open_document() {
@@ -24631,7 +24665,7 @@ var diagram = (function () {
         window.location.hash = model.get_notes_name();
       } else {
         //hash is notes name
-        model.reset(location.hash.toString());
+        model.reset(decodeURI(location.hash.toString()));
       }
     } else {
       model.reset();
@@ -24756,6 +24790,81 @@ var diagram = (function () {
   	run: run_1
   };
 
+  //var cmenu = require('./contextmenu');
+
+  var ele = document.getElementById('outline');
+  //var dialog = require('./dialog');
+
+  let widgets$1 = new Set();
+  let container_ele$1 = ele;
+  let is_locked = false;
+
+  function cb(e) {
+    let id =  e.target.innerHTML;
+    model.set_active_document(id);
+  }
+
+
+  function add_button$1(name, label, classname) {
+    //add button DOM and listener
+    name += '__OUTLINE__';
+    if (!widgets$1.has(name)) {
+      widgets$1.add(name);
+      var childNode = document.createElement('button');
+      childNode.innerHTML = label;
+      childNode.className = classname;
+      childNode.id = name;
+      container_ele$1.appendChild(childNode);
+      childNode.addEventListener('click', cb);
+    }
+  }
+
+  function clear_all_btn() {
+    for (let name of widgets$1) {
+      widgets$1.delete(name);
+      let e = document.getElementById(name);
+      e.remove();
+    }
+  }
+
+  function set_attr(name, val) {
+    ele.style[name] = val;
+  }
+
+  function update_buttons() {
+    {
+      clear_all_btn();
+      let nodes = model.get_subnode_names(canvas.get_currect_doc());
+      for (let n of nodes) {
+        add_button$1(n, n, 'button-outline');
+      }
+    }
+  }
+
+  function lock(status) {
+    is_locked = status;
+  }
+
+  model.on('DOCUMENT-UPDATE', () => {
+    if (!is_locked) {
+      update_buttons();
+    }
+  });
+
+  model.on('ACTIVE-DOCUMENT', () => {
+    if (!is_locked) {
+      update_buttons();
+    }
+  });
+
+  var set_attr_1 = set_attr;
+  var lock_1 = lock;
+
+  var outline = {
+  	set_attr: set_attr_1,
+  	lock: lock_1
+  };
+
   /*
   listen on below events:
   - DOCUMENT-UPDATE
@@ -24773,6 +24882,51 @@ var diagram = (function () {
 
 
 
+
+
+
+
+
+  const target_state_init = {
+    explorer: 'show',        //show, hide
+    editor: 'show',          //show, hide
+    canvas: 'show',          //show, locked
+    outline: 'show'          //show, hide, locked
+  };
+
+  let browse_history = [ 'index' ];
+  let current_file = 0;
+
+  function add_to_list(name) {
+    browse_history.push(name);
+    if (browse_history.length > 100) browse_history.shift();
+    //current_file = browse_history.length - 1;
+  }
+
+  function previous() {
+    current_file -= 1;
+    if (current_file < 0) current_file = 0;
+    return browse_history.at(current_file);
+  }
+
+  function next() {
+    current_file += 1;
+    if (current_file === browse_history.length) current_file = browse_history.length - 1;
+    return browse_history.at(current_file);
+  }
+
+  function reset_history() {
+    browse_history = [ 'index' ];
+    current_file = 0;
+  }
+
+  let target_state = Object.assign({}, target_state_init);
+
+  const colors = {
+    show: 'white',
+    hide: 'gray',
+    lock: 'red'
+  };
 
 
   //all the node with a toolbar entry.
@@ -24796,16 +24950,12 @@ var diagram = (function () {
     }
   }
 
-  function add_button(name, label, cb, user) {
+  function add_button(name, label, cb, classname) {
     //add button DOM and listener
     name += '__TOOLBAR__';
-    let classname = user;
+    classname = classname || 'button-system';
     if (!widgets.has(name)) {
-      if (!user) {
-        classname = 'button-system';
-      } else {
-        widgets.add(name);
-      }
+      widgets.add(name);
       var childNode = document.createElement('button');
       childNode.innerHTML = label;
       childNode.className = classname;
@@ -24861,17 +25011,6 @@ var diagram = (function () {
     model.set_config('buttons', conf);
   }
 
-  function cleanup() {
-    let names = model.get_all_names();
-    for (let id of widgets) {
-      id = id.substring(0, id.length - '__TOOLBAR__'.length);
-      if (!(id in names)) {
-        rm_cb(id);
-      }
-    }
-
-  }
-
   function exe_cb() {
     let name = model.get_active_document();
     let cmds = model.get_common_attr(name, 'commands');
@@ -24883,12 +25022,77 @@ var diagram = (function () {
     model.reset();
   }
 
+  function exe_index() {
+    model.set_active_document('index');
+  }
+
+  function exe_show_hide(e, name, mod) {
+    if (target_state[name] === 'hide') {
+      mod.set_attr('display', 'block');
+      e.target.style.color = colors['show'];
+      target_state[name] = 'show';
+    } else {
+      mod.set_attr('display', 'none');
+      e.target.style.color = colors['hide'];
+      target_state[name] = 'hide';
+    }
+  }
+
+  function exe_show_lock(e, name, mod) {
+    if (target_state[name] === 'lock') {
+      mod.lock(false);
+      e.target.style.color = colors['show'];
+      target_state[name] = 'show';
+    } else {
+      mod.lock(true);
+      e.target.style.color = colors['lock'];
+      target_state[name] = 'lock';
+    }
+  }
+
+  function exe_show_hide_lock(e, name, mod) {
+    if (target_state[name] === 'hide') {
+      //hide => show
+      mod.set_attr('display', 'block');
+      e.target.style.color = colors['show'];
+      target_state[name] = 'show';
+    } else if (target_state[name] === 'show') {
+      //show => lock
+      mod.lock(true);
+      e.target.style.color = colors['lock'];
+      target_state[name] = 'lock';
+    } else {
+      mod.lock(false);
+      e.target.style.color = colors['hide'];
+      target_state[name] = 'hide';
+      mod.set_attr('display', 'none');
+    }
+  }
+
+  function exe_backward() {
+    model.set_active_document(previous());
+    browse_history.pop();
+  }
+
+  function exe_forward() {
+    model.set_active_document(next());
+    browse_history.pop();
+  }
+
   function add_tools() {
     //exe active node
     //add button
     //remove button
-    add_button('__SYSTEM_HOME', 'Home', exe_home, false);  //false means not a user button.
-    add_button('__SYSTEM_EXE', 'Execute', exe_cb, false);  //false means not a user button.
+    add_button('__SYSTEM_HOME', 'Lobby', exe_home, false);  //false means not a user button.
+    add_button('__SYSTEM_EXPLORER', 'Explorer', function (e) { exe_show_hide(e, 'explorer', explorer); }, false);  //false means not a user button.
+    add_button('__SYSTEM_EDITOR', 'Editor', function (e) { exe_show_hide(e, 'editor',  editor); }, false);  //false means not a user button.
+    add_button('__SYSTEM_CANVAS', 'Canvas', function (e) { exe_show_lock(e, 'canvas',  canvas); }, false);  //false means not a user button.
+    add_button('__SYSTEM_OUTLINE', 'Outline', function (e) { exe_show_hide_lock(e, 'outline',  outline); }, false);  //false means not a user button.
+    add_button('__SYSTEM_BACKWARD', '<-', exe_backward, false);  //false means not a user button.
+    add_button('__SYSTEM_INDEX', 'Index', exe_index, false);  //false means not a user button.
+    add_button('__SYSTEM_FORWARD', '->', exe_forward, false);  //false means not a user button.
+
+    //add_button('__SYSTEM_EXE', 'Execute', exe_cb, false);  //false means not a user button.
     //add_button('__SYSTEM_ADD', 'Add Button', add_cb, true);
     //add_button('__SYSTEM_REMOVE', 'Remove Button', rm_cb, true);
   }
@@ -24925,7 +25129,7 @@ var diagram = (function () {
         }
       }
     },
-    {
+    /*{
       text: 'Clean Empty Menu Item',
       events: {
         click: function () {
@@ -24933,8 +25137,19 @@ var diagram = (function () {
           cleanup();
         }
       }
+    },*/
+    {
+      text: 'Run Current Node',
+      events: {
+        click: function () {
+          //var target = e.target;
+          exe_cb();
+        }
+      }
     }
   ];
+
+  //exe_cb
 
   menu = new contextmenu.ContextMenu(cmen);
 
@@ -24948,6 +25163,17 @@ var diagram = (function () {
         model.set_active_document(n.value);
       }
     };
+
+    //init internal data
+    target_state = Object.assign({}, target_state_init);
+    clear_all_cb();
+    widgets = new Set();
+    canvas.lock(false);
+    outline.lock(false);
+    explorer.set_attr('display', 'block');
+    editor.set_attr('display', 'block');
+    outline.set_attr('display', 'block');
+
     //add function buttons
     add_tools();
     container_ele.addEventListener('contextmenu', function (e) {
@@ -24962,27 +25188,22 @@ var diagram = (function () {
   */
 
   model.on('ACTIVE-DOCUMENT', () => {
-    doc_name_ele.innerHTML = model.get_active_document();
+    if (doc_name_ele) doc_name_ele.innerHTML = model.get_active_document();
+    add_to_list(model.get_active_document());
   });
 
   model.on('OPEN-NOTES', () => {
+    init('toolbar');
+    config();
     notes_name_ele.innerHTML = model.get_notes_name();
     //change hash
     window.location.hash = model.get_notes_name();
-    clear_all_cb();
-    config();
+    reset_history();
   });
 
-
-  var init_1 = init;
-  var config_1 = config;
-  var cleanup_1 = cleanup;
-
-  var toolbar = {
-  	init: init_1,
-  	config: config_1,
-  	cleanup: cleanup_1
-  };
+  model.on('STORAGE_UPDATE', () => {
+    if (notes_name_ele) notes_name_ele.href = '#diag=' +  model.get_b64();
+  });
 
   //const { default: nodeResolve } = require('@rollup/plugin-node-resolve');
   /* eslint-env browser */
@@ -24992,10 +25213,8 @@ var diagram = (function () {
 
 
   window.onload = function () {
-    toolbar.init('toolbar');
     canvas.init();
     pannel.open_document();
-    toolbar.config();
   };
 
   var diagram = {
