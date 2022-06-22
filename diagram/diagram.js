@@ -4083,7 +4083,7 @@ var diagram = (function () {
   	reset_listener: reset_listener_1
   };
 
-  const default_name = '#default_diagram';
+  const default_name = '#default_notes';
   const frontpage = 'index';
 
   var notes_name = default_name;
@@ -4091,7 +4091,7 @@ var diagram = (function () {
   let config_file = 'diagram.system.configuration';
 
   //eslint-disable-next-line
-  let default_b64 = 'eyJpbmRleCI6Ii0tLVxuc3R5bGU6IHt9XG5ub2RlczogW11cbmVkZ2VzOiBbXVxuLS0tXG5cblRoaXMgaXMgYW4gZW1wdHkgbm90ZXMuIiwiZGlhZ3JhbS5zeXN0ZW0uY29uZmlndXJhdGlvbiI6Ii0tLVxuc3R5bGU6IHt9XG5ub2RlczogW11cbmVkZ2VzOiBbXVxuYnV0dG9uczpcbiAgLSBicm93c2luZ1xuICAtIG5vdGUgdGFraW5nXG4gIC0gY2FudmFzIG9ubHlcbmtlZXA6XG4gIC0gZGlhZ3JhbS5zeXN0ZW0uY29uZmlndXJhdGlvblxuICAtIG5vdGUgdGFraW5nXG4gIC0gY2FudmFzIG9ubHlcbiAgLSBicm93c2luZ1xuLS0tXG5cbkNvbmZpZ3VyYXRpb24gRGF0YVxuIiwibm90ZSB0YWtpbmciOiItLS1cbm5hbWU6IG5vdGUgdGFraW5nXG5ub3RlOiBjb25maWdcbnN0eWxlOiB7fVxubm9kZXM6IFtdXG5lZGdlczogW11cbmNvbW1hbmRzOlxuICAtIG5hbWU6IHRoZW1lXG4gICAgYXJndjpcbiAgICAgIGV4cGxvcmVyOlxuICAgICAgICB3aWR0aDogMCVcbiAgICAgIGVkaXRvcjpcbiAgICAgICAgd2lkdGg6IDUwdndcbi0tLSIsImNhbnZhcyBvbmx5IjoiLS0tXG5ub3RlOiBjb25maWdcbnN0eWxlOiB7fVxubm9kZXM6IFtdXG5lZGdlczogW11cbmNvbW1hbmRzOlxuICAtIG5hbWU6IHRoZW1lXG4gICAgYXJndjpcbiAgICAgIGV4cGxvcmVyOlxuICAgICAgICB3aWR0aDogMCVcbiAgICAgIGVkaXRvcjpcbiAgICAgICAgd2lkdGg6IDAlXG4tLS1cblxuQ2FudmFzIE9ubHkgVmlldyIsImJyb3dzaW5nIjoiLS0tXG5ub3RlOiBjb25maWdcbnN0eWxlOiB7fVxubm9kZXM6IFtdXG5lZGdlczogW11cbmNvbW1hbmRzOlxuICAtIG5hbWU6IHRoZW1lXG4gICAgYXJndjpcbiAgICAgIGV4cGxvcmVyOlxuICAgICAgICB3aWR0aDogNTAlXG4gICAgICBlZGl0b3I6XG4gICAgICAgIHdpZHRoOiA1MCVcbi0tLVxuXG5DYW52YXMgT25seSBWaWV3In0=';
+  let default_b64 = 'eyJpbmRleCI6Ii0tLVxuc3R5bGU6IHt9XG5ub2RlczogW11cbmVkZ2VzOiBbXVxuLS0tXG5cblRoaXMgaXMgYW4gZW1wdHkgbm90ZXMuIiwiZGlhZ3JhbS5zeXN0ZW0uY29uZmlndXJhdGlvbiI6Ii0tLVxuc3R5bGU6IHt9XG5ub2RlczogW11cbmVkZ2VzOiBbXVxuYnV0dG9uczogbnVsbFxua2VlcDpcbiAgLSBkaWFncmFtLnN5c3RlbS5jb25maWd1cmF0aW9uXG4tLS1cblxuQ29uZmlndXJhdGlvbiBEYXRhXG4ifQ==';
 
 
   state.init({
@@ -4141,9 +4141,16 @@ var diagram = (function () {
     return state.get_store().documents;
   }
 
-  function _update_document(impacted, docs, name, content) {
+  /*
+  each doc has 2 attrs:
+
+  body:  markdown part
+  json:  front matter part in JSON
+
+  */
+
+  function _update_document(docs, name, content) {
     //TODO need to check 'follow' attributes, prevent loop inherit
-    var new_file_created = false;
     var h;
 
     try {
@@ -4153,14 +4160,9 @@ var diagram = (function () {
       h.__content = content;
     }
 
-    if (!docs[name]) {
-      //notify listener that a file was created
-      new_file_created = true;
-    }
-
     docs[name] = {
-      body: h.__content,
-      content: content
+      body: h.__content
+      //content: content
     };
 
     if (!h.style) {
@@ -4174,12 +4176,9 @@ var diagram = (function () {
     }
 
     delete h.__content;
-    docs[name].error = false;
+    //docs[name].error = false;
     docs[name].json = h;   //...json.nodes = ['n1','n2',...]
 
-    if (new_file_created) {
-      state.emit('DOCUMENT-CREATE',  { impacted: name });
-    }
     return { impacted: name, documents: docs };
   }
 
@@ -4209,19 +4208,22 @@ var diagram = (function () {
   }
 
 
-  function update_storage() {
-    window.localStorage.setItem(notes_name, build_permlink());
+  function update_storage(name, data) {
+    name = name || notes_name;
+    data = data || build_permlink();
+    window.localStorage.setItem(name, data);
     state.emit('STORAGE_UPDATE', {});
   }
 
-  function get_b64() {
-    return window.localStorage.getItem(notes_name);
+  function get_b64(name) {
+    name = name || notes_name;
+    return window.localStorage.getItem(name);
   }
 
   //  store.emit('ACTIVE-DOCUMENT', () => ({ active : name }));
   function update_document(name, content) {
     name = String(name);
-    state.emit('DOCUMENT-UPDATE', ({ impacted, documents }) => (_update_document(impacted, documents, name, content)));
+    state.emit('DOCUMENT-UPDATE', ({ documents }) => (_update_document(documents, name, content)));
     update_storage();
   }
 
@@ -4248,11 +4250,13 @@ var diagram = (function () {
   function set_active_document(name) {
     state.emit('ACTIVE-DOCUMENT', () => ({ active : name }));
     //check if it's a notes package???
+    /*
     if (localStorage.getItem(name) !== null) {
       //open the note pacakge named target_doc
       // eslint-disable-next-line no-use-before-define
       reset(name);
     }
+    */
   }
 
   function get_active_document() {
@@ -4263,10 +4267,15 @@ var diagram = (function () {
     return state.get_store().impacted;
   }
 
-  function get_document_obj(id) {
+  function get_document_obj(id, create) {
     var documents = state.get_store().documents;
     if (!documents[id]) {
-      update_document(id, '');
+      //update_document(id, '');
+      if (create) {
+        update_document(id, '');
+      } else {
+        return {};
+      }
     }
     return documents[id].json;
   }
@@ -4280,7 +4289,7 @@ var diagram = (function () {
   }
 
   function set_common_attr(id, key, value) {
-    var obj = get_document_obj(id);
+    var obj = get_document_obj(id, true);
     obj[key] = value;
     update_storage();
   }
@@ -4365,17 +4374,6 @@ var diagram = (function () {
 
   function rename_document(src, target) {
     state.emit('DOCUMENT-RENAME', (s) => {
-      if (localStorage.getItem(src) !== null) {
-        let v = localStorage.getItem(src);
-        if (target.charAt(0) !== '#') {
-          target = '#' + target;
-        }
-        localStorage.setItem(target, v);
-        if (src !== default_name) {
-          localStorage.removeItem(src); //always remove
-        }
-        //dialog.alert('Notes Pacakge ' + name + ' also renamed!');
-      }
       s.documents[target] = s.documents[src];
       let keep = get_common_attr(config_file, 'keep');
       if (keep instanceof Array) {
@@ -4396,9 +4394,6 @@ var diagram = (function () {
           delete s.documents[name];
           s.impacted = name;
         }
-      }
-      if (name !== default_name) {
-        localStorage.removeItem(name); //always remove
       }
       update_storage();
       return s;
@@ -4480,10 +4475,13 @@ var diagram = (function () {
         notes_data = window.localStorage.getItem(name);
       }
     }
+
+    /*
     //make sure name starts with #
     if (notes_name.charAt(0) !== '#') {
       notes_name = '#' + notes_name;
     }
+    */
 
     //init and make sure notes_data is valid
     if (!init_from_permlink(notes_data)) {
@@ -4498,14 +4496,17 @@ var diagram = (function () {
     }
 
     window.localStorage.setItem(notes_name, notes_data);
+    /*
     if (notes_name === default_name) {
       //add all notes to the default note
       for (let k of Object.keys(window.localStorage)) {
-        if (k !== default_name) {
-          update_document(k, 'Click to Open Notes');
-        }
+        //if (k !== default_name) {
+        update_document(k, 'Click to Open Notes');
+        //}
       }
     }
+    */
+
     set_active_document(frontpage);
     state.emit('OPEN-NOTES', {});
   }
@@ -4514,8 +4515,70 @@ var diagram = (function () {
     return notes_name;
   }
 
+
+
+  function duplicate_notes(src, target) {
+    if (localStorage.getItem(src) !== null) {
+      let v = localStorage.getItem(src);
+      localStorage.setItem(target, v);
+    }
+    state.emit('DOCUMENT-UPDATE', {});
+  }
+
+  function new_notes(name) {
+    duplicate_notes(default_name, name);
+    state.emit('DOCUMENT-UPDATE', {});
+  }
+
+  function delete_notes(name) {
+    if (name !== default_name) {
+      localStorage.removeItem(name); //always remove
+    }
+    state.emit('DOCUMENT-DELETE', {});
+  }
+
+  function rename_notes(src, target) {
+    duplicate_notes(src, target);
+    delete_notes(src);
+    state.emit('DOCUMENT-RENAME', {});
+  }
+
+  function get_all_notes_name() {
+    let r = {};
+    for (let k of Object.keys(window.localStorage)) {
+      r[k] = 'Notes';
+    }
+    return r;
+  }
+
   function is_notes(name) {
     return localStorage.getItem(name) !== null;
+  }
+
+  //in a dict
+  /* each notes is one string. same as the b64 version without base64 encode.
+  notes_name1: stringify({
+     doc_name1: markdown body with frontmatter, same as shown in editor
+     doc_name2: ...
+  })
+  notes_name2: stringify({
+     doc_name1: ...
+  })
+
+  */
+  function get_all_notes() {
+    let d = {};
+    for (let n of get_all_notes_name()) {
+      d[n] = base64.decode(get_b64(n));
+    }
+    return d;
+  }
+
+  function set_all_notes(data) {
+    for (let n of Object.keys(data)) {
+      update_storage(n, base64.encode(data[n]));
+    }
+    reset(notes_name);
   }
 
   var reset_1 = reset;
@@ -4548,19 +4611,35 @@ var diagram = (function () {
   var set_config_1 = set_config;
   var get_config_1 = get_config;
 
-  var get_notes_name_1 = get_notes_name;
-
   var format_1 = format;
 
   var get_b64_1 = get_b64;
+
   var is_notes_1 = is_notes;
+  var new_notes_1 = new_notes;
+  var delete_notes_1 = delete_notes;
+  var rename_notes_1 = rename_notes;
+  var duplicate_notes_1 = duplicate_notes;
+  var get_notes_name_1 = get_notes_name;
+  var get_all_notes_name_1 = get_all_notes_name;
+  var get_all_notes_1 = get_all_notes;  //in a dict
+  var set_all_notes_1 = set_all_notes;  //in a dict
+
+  /*
+  notes_name1:
+     doc_name1: ...
+     doc_name2: ...
+  notes_name2:
+     doc_name1: ...
+     doc_name2: ...
+
+  */
 
   /* support EVENTS
   'ACTIVE-DOCUMENT'
   'DOCUMENT-UPDATE'
   "DOCUMENT-DELETE"
   "DOCUMENT-RENAME"
-  "DOCUMENT-CREATE"
   ‘RESET’
   ‘OPEN-NOTES’
   STORAGE_UPDATE
@@ -4590,10 +4669,17 @@ var diagram = (function () {
   	reset_listener: reset_listener,
   	set_config: set_config_1,
   	get_config: get_config_1,
-  	get_notes_name: get_notes_name_1,
   	format: format_1,
   	get_b64: get_b64_1,
-  	is_notes: is_notes_1
+  	is_notes: is_notes_1,
+  	new_notes: new_notes_1,
+  	delete_notes: delete_notes_1,
+  	rename_notes: rename_notes_1,
+  	duplicate_notes: duplicate_notes_1,
+  	get_notes_name: get_notes_name_1,
+  	get_all_notes_name: get_all_notes_name_1,
+  	get_all_notes: get_all_notes_1,
+  	set_all_notes: set_all_notes_1
   };
 
   // List of valid entities
@@ -12047,6 +12133,8 @@ var diagram = (function () {
   const { Remarkable } = require$$0;
   const { escapeHtml } = require$$0.utils;
   var md2html = new Remarkable();
+  //const mermaid = require('mermaid');
+  //const mermaidAPI = mermaid.mermaidAPI;
 
 
 
@@ -12063,6 +12151,17 @@ var diagram = (function () {
       return imgOutput;
     };
   })();
+
+  /*
+  md2html.renderer.rules.fence_custom['mermaid'] = function (tokens, index) {
+    var token = tokens[index];
+    var result;
+    mermaidAPI.render('id1', token.content, function (cbResult) {
+      result = cbResult;
+    });
+    return result;
+  };
+  */
 
   function add_px(value) {
     if (!isNaN(parseFloat(value)) && isFinite(value)) {
@@ -12115,15 +12214,18 @@ var diagram = (function () {
   function add_node(model, name) {
     var l = model.get_subnode_names(name);
     var e = model.get_edges(name);
-    if (e.length === 0) {
+    if (l.length === 0) {
       add_only_node(name, model.get_attrs(name), model.get_document_body(name));
     } else {
       for (let n of l) {
         if (model.document_available(n)) {
           add_only_node(n, model.get_attrs(n), model.get_document_body(n));
         }
-        //add_node(model, n);
       }
+    }
+    if (e.length !== 0) {
+      //    add_only_node(name, model.get_attrs(name), model.get_document_body(name));
+      //  } else {
       edges.add_edges(e);  //add edges here sine edges are part of node.
     }
   }
@@ -12139,633 +12241,6 @@ var diagram = (function () {
   var node_1 = {
   	add_node: add_node_1,
   	clear_nodes: clear_nodes_1
-  };
-
-  var ele$3 = document.getElementById('dst');
-
-  let is_locked$1 = false;
-
-  //retrieve the top/left parameters of each node, rebuild yaml
-  function node_moved() {
-    //update model
-    var name = model.get_active_document();
-    var nodes = model.get_subnode_names(name);
-    if (nodes.length === 0) { //it's the node
-      let e = document.getElementById(name);
-      model.update_attr(name, 'left', e.style.left);
-      model.update_attr(name, 'top', e.style.top);
-      //source.setValue(m.get_document_content(name));
-      model.set_active_document(name);   //Trigger left pannel update
-    } else {
-      for (let n of nodes) {
-        let e = document.getElementById(n);
-        model.update_attr(n, 'left', e.style.left);
-        model.update_attr(n, 'top', e.style.top);
-      }
-    }
-  }
-
-  function node_selected(p) {
-    //console.log(p);
-    model.set_active_document(p.id);
-    //update_dropdown();
-    //dropdown.value = p.id;
-    //source.setValue(m.get_document_content(p.id));
-  }
-
-  function init$1() {
-    //it will be updated automatically. by the timer.
-    var canvas = document.getElementById('canvas');
-
-    jsPlumbBrowserUI.ready(function () {
-      window.j = jsPlumbBrowserUI.newInstance({
-        dragOptions: { cursor: 'pointer', zIndex: 2000 },
-        paintStyle: { stroke: '#666', strokeWidth:2 },
-        endpointHoverStyle: { fill: 'orange' },
-        hoverPaintStyle: { stroke: 'orange' },
-        endpointStyle: { width: 20, height: 16, stroke: '#666' },
-        endpoint: 'Rectangle',
-        anchors: [ 'TopCenter', 'TopCenter' ],
-        container: canvas,
-        dropOptions:{ activeClass:'dragActive', hoverClass:'dropHover' }
-      });
-
-      window.diagram_model = model;
-
-      //eslint-disable-next-line
-      window.j.bind(jsPlumbBrowserUI.EVENT_DRAG_STOP, (p) => { 
-        node_moved();
-      });
-
-      window.j.bind(jsPlumbBrowserUI.EVENT_ELEMENT_DBL_CLICK, (p) => {
-        node_selected(p);
-      });
-    });
-  }
-
-  var current_doc = '';
-
-  function get_current_doc() {
-    return current_doc;
-  }
-  model.on('ACTIVE-DOCUMENT', ({ active }) => {
-    if (window.j && !is_locked$1) {
-      window.j.reset();
-      node_1.add_node(model, active);
-      current_doc = active;
-    }
-  });
-
-  model.on('DOCUMENT-UPDATE', ({ impacted }) => {
-    if (window.j) {
-      if ((current_doc === impacted) && !is_locked$1) { //if not locked,update current doc
-        window.j.reset();
-        node_1.add_node(model, impacted);
-      }
-      if (model.get_subnode_names(current_doc).includes(impacted)) { //regardless locked or not update in case a subnode is impacted.
-        window.j.reset();
-        node_1.add_node(model, current_doc);
-      }
-    }
-  }
-  );
-
-  function set_attr$3(name, val) {
-    ele$3.style[name] = val;
-  }
-
-  function lock$1(status) {
-    is_locked$1 = status;
-  }
-  var set_attr_1$3 = set_attr$3;
-  var init_1 = init$1;
-  var lock_1$1 = lock$1;
-  var get_currect_doc = get_current_doc;
-
-  var canvas = {
-  	set_attr: set_attr_1$3,
-  	init: init_1,
-  	lock: lock_1$1,
-  	get_currect_doc: get_currect_doc
-  };
-
-  // https://github.com/m-thalmann/contextmenujs
-  function ContextMenu(menu, options) {
-    var self = this;
-    var num = ContextMenu.count++;
-
-    this.menu = menu;
-    this.contextTarget = null;
-
-    if (!(menu instanceof Array)) {
-      throw new Error('Parameter 1 must be of type Array');
-    }
-
-    if (typeof options !== 'undefined') {
-      if (typeof options !== 'object') {
-        throw new Error('Parameter 2 must be of type object');
-      }
-    } else {
-      options = {};
-    }
-
-    window.addEventListener('resize', function () {
-      if (ContextUtil.getProperty(options, 'close_on_resize', true)) {
-        self.hide();
-      }
-    });
-
-    this.setOptions = function (_options) {
-      if (typeof _options === 'object') {
-        options = _options;
-      } else {
-        throw new Error('Parameter 1 must be of type object');
-      }
-    };
-
-    this.changeOption = function (option, value) {
-      if (typeof option === 'string') {
-        if (typeof value !== 'undefined') {
-          options[option] = value;
-        } else {
-          throw new Error('Parameter 2 must be set');
-        }
-      } else {
-        throw new Error('Parameter 1 must be of type string');
-      }
-    };
-
-    this.getOptions = function () {
-      return options;
-    };
-
-    this.reload = function () {
-      if (document.getElementById('cm_' + num) == null) {
-        var cnt = document.createElement('div');
-        cnt.className = 'cm_container';
-        cnt.id = 'cm_' + num;
-
-        document.body.appendChild(cnt);
-      }
-
-      var container = document.getElementById('cm_' + num);
-      container.innerHTML = '';
-
-      container.appendChild(renderLevel(menu));
-    };
-
-    function renderLevel(level) {
-      var ul_outer = document.createElement('ul');
-
-      level.forEach(function (item) {
-        var li = document.createElement('li');
-        li.menu = self;
-
-        if (typeof item.type === 'undefined') {
-          var icon_span = document.createElement('span');
-          icon_span.className = 'cm_icon_span';
-
-          if (ContextUtil.getProperty(item, 'icon', '') != '') {
-            icon_span.innerHTML = ContextUtil.getProperty(item, 'icon', '');
-          } else {
-            icon_span.innerHTML = ContextUtil.getProperty(options, 'default_icon', '');
-          }
-
-          var text_span = document.createElement('span');
-          text_span.className = 'cm_text';
-
-          if (ContextUtil.getProperty(item, 'text', '') != '') {
-            text_span.innerHTML = ContextUtil.getProperty(item, 'text', '');
-          } else {
-            text_span.innerHTML = ContextUtil.getProperty(options, 'default_text', 'item');
-          }
-
-          var sub_span = document.createElement('span');
-          sub_span.className = 'cm_sub_span';
-
-          if (typeof item.sub !== 'undefined') {
-            if (ContextUtil.getProperty(options, 'sub_icon', '') != '') {
-              sub_span.innerHTML = ContextUtil.getProperty(options, 'sub_icon', '');
-            } else {
-              sub_span.innerHTML = '&#155;';
-            }
-          }
-
-          li.appendChild(icon_span);
-          li.appendChild(text_span);
-          li.appendChild(sub_span);
-
-          if (!ContextUtil.getProperty(item, 'enabled', true)) {
-            li.setAttribute('disabled', '');
-          } else {
-            if (typeof item.events === 'object') {
-              var keys = Object.keys(item.events);
-
-              for (var i = 0; i < keys.length; i++) {
-                li.addEventListener(keys[i], item.events[keys[i]]);
-              }
-            }
-
-            if (typeof item.sub !== 'undefined') {
-              li.appendChild(renderLevel(item.sub));
-            }
-          }
-        } else  if (item.type == ContextMenu.DIVIDER) {
-          li.className = 'cm_divider';
-        }
-
-        ul_outer.appendChild(li);
-      });
-
-      return ul_outer;
-    }
-
-    this.display = function (e, target) {
-      if (typeof target !== 'undefined') {
-        self.contextTarget = target;
-      } else {
-        self.contextTarget = e.target;
-      }
-
-      var menu = document.getElementById('cm_' + num);
-
-      var clickCoords = { x: e.clientX, y: e.clientY };
-      var clickCoordsX = clickCoords.x;
-      var clickCoordsY = clickCoords.y;
-
-      var menuWidth = menu.offsetWidth + 4;
-      var menuHeight = menu.offsetHeight + 4;
-
-      var windowWidth = window.innerWidth;
-      var windowHeight = window.innerHeight;
-
-      var mouseOffset = parseInt(ContextUtil.getProperty(options, 'mouse_offset', 2));
-
-      if ((windowWidth - clickCoordsX) < menuWidth) {
-        menu.style.left = windowWidth - menuWidth + 'px';
-      } else {
-        menu.style.left = (clickCoordsX + mouseOffset) + 'px';
-      }
-
-      if ((windowHeight - clickCoordsY) < menuHeight) {
-        menu.style.top = windowHeight - menuHeight + 'px';
-      } else {
-        menu.style.top = (clickCoordsY + mouseOffset) + 'px';
-      }
-
-      var sizes = ContextUtil.getSizes(menu);
-
-      if ((windowWidth - clickCoordsX) < sizes.width) {
-        menu.classList.add('cm_border_right');
-      } else {
-        menu.classList.remove('cm_border_right');
-      }
-
-      if ((windowHeight - clickCoordsY) < sizes.height) {
-        menu.classList.add('cm_border_bottom');
-      } else {
-        menu.classList.remove('cm_border_bottom');
-      }
-
-      menu.classList.add('display');
-
-      if (ContextUtil.getProperty(options, 'close_on_click', true)) {
-        window.addEventListener('click', documentClick);
-      }
-
-      e.preventDefault();
-    };
-
-    this.hide = function () {
-      document.getElementById('cm_' + num).classList.remove('display');
-      window.removeEventListener('click', documentClick);
-    };
-
-    function documentClick() {
-      self.hide();
-    }
-
-    this.reload();
-  }
-
-  ContextMenu.count = 0;
-  ContextMenu.DIVIDER = 'cm_divider';
-
-  const ContextUtil = {
-    getProperty: function (options, opt, def) {
-      if (typeof options[opt] !== 'undefined') {
-        return options[opt];
-      }
-      return def;
-
-    },
-
-    getSizes: function (obj) {
-      var lis = obj.getElementsByTagName('li');
-
-      var width_def = 0;
-      var height_def = 0;
-
-      for (var i = 0; i < lis.length; i++) {
-        var li = lis[i];
-
-        if (li.offsetWidth > width_def) {
-          width_def = li.offsetWidth;
-        }
-
-        if (li.offsetHeight > height_def) {
-          height_def = li.offsetHeight;
-        }
-      }
-
-      var width = width_def;
-      var height = height_def;
-
-      for (var i = 0; i < lis.length; i++) {
-        var li = lis[i];
-
-        var ul = li.getElementsByTagName('ul');
-        if (typeof ul[0] !== 'undefined') {
-          var ul_size = ContextUtil.getSizes(ul[0]);
-
-          if (width_def + ul_size.width > width) {
-            width = width_def + ul_size.width;
-          }
-
-          if (height_def + ul_size.height > height) {
-            height = height_def + ul_size.height;
-          }
-        }
-      }
-
-      return {
-        width: width,
-        height: height
-      };
-    }
-  };
-
-  var ContextMenu_1 = ContextMenu;
-
-  var contextmenu = {
-  	ContextMenu: ContextMenu_1
-  };
-
-  //const { Swal } = require("../../../library/sweetalert2.all.min");
-
-  function alert(msg) {
-    Swal.fire(msg);
-  }
-
-  /*
-  const { value: text } = await Swal.fire({
-    input: 'textarea',
-    inputLabel: 'Message',
-    inputPlaceholder: 'Type your message here...',
-    inputAttributes: {
-      'aria-label': 'Type your message here'
-    },
-    showCancelButton: true
-  })
-
-  if (text) {
-    Swal.fire(text)
-  }
-  */
-  async function readline(label, placeholder, showcancel) {
-    const text = await Swal.fire({
-      input: 'text',
-      inputLabel: label,
-      inputPlaceholder: placeholder,
-      inputAttributes: {
-        'aria-label': placeholder
-      },
-      showCancelButton: showcancel
-    });
-    return text;
-  }
-
-  async function confirm(label, yes, no) {
-    let n = await Swal.fire({
-      title: label,
-      showDenyButton: true,
-      //showCancelButton: true,
-      confirmButtonText: yes || 'Yes',
-      denyButtonText: no || 'No'
-    });
-    return (n.isConfirmed);
-  }
-
-  var alert_1 = alert;
-  var readline_1 = readline;
-  var confirm_1 = confirm;
-
-  var dialog = {
-  	alert: alert_1,
-  	readline: readline_1,
-  	confirm: confirm_1
-  };
-
-  var rows = [];
-  var search = document.getElementById('search');
-  var ele$2 = document.getElementById('explorer_container');
-
-
-
-  /* Fill array with data
-   * Fields:
-   * values *array* - value of each field (in case use of table)
-   * markup *string* - markup that will be added to the DOM
-   * active *bool* - specifies if row is suitable by search phrase
-  */
-
-  //get all the node names and notes
-
-  function build_data() {
-    rows = [];
-    var names = model.get_all_names();
-    for (let k of Object.keys(names)) {
-      rows.push({
-        values: [ k, names[k] ],
-        markup: '<tr>' +
-                            '<td>' + k + '</td>' +
-                            '<td>' + names[k] + '</td>' +
-                          '</tr>',
-        active: true
-      });
-    }
-  }
-
-
-  /*
-    * Fetch suitable rows
-    */
-  function func_filterRows(rows) {
-    var results = [];
-    for (var i = 0, ii = rows.length; i < ii; i++) {
-      if (rows[i].active) results.push(rows[i].markup);
-    }
-    return results;
-  }
-
-  var filterRows = func_filterRows;
-  /*
-    * Init clusterize.js
-    */
-  var clusterize = new Clusterize({
-    rows: filterRows(rows),
-    scrollId: 'scrollArea',
-    contentId: 'contentArea'
-  });
-
-  /*
-    * Multi-column search
-    */
-  function func_onSearch() {
-    for (var i = 0, ii = rows.length; i < ii; i++) {
-      var suitable = false;
-      for (var j = 0, jj = rows[i].values.length; j < jj; j++) {
-        if (rows[i].values[j].toString().indexOf(search.value) + 1) { suitable = true; }
-      }
-      rows[i].active = suitable;
-    }
-    clusterize.update(filterRows(rows));
-  }
-
-  var onSearch = func_onSearch;
-
-  var eletb = document.getElementById('contentArea');
-
-  eletb.onclick = async function (e) {
-    var target = e.target;
-    if (target.nodeName !== 'TD') return;
-    let target_doc = target.parentElement.firstElementChild.innerText;
-    model.set_active_document(target_doc);
-
-  };
-
-  //ondblclick
-
-  var name = '';
-  eletb.oncontextmenu = function (e) {
-    var target = e.target;
-    if (target.nodeName !== 'TD') return;
-    name = target.parentElement.firstElementChild.innerText;
-    //console.log(target.parentElement.firstElementChild.innerText);
-  };
-
-  search.oninput = onSearch;
-
-
-
-
-  function set_attr$2(name, val) {
-    ele$2.style[name] = val;
-  }
-
-  var menu$1;
-  var cmen$1 = [
-    {
-      text: 'New Node',
-      events: {
-        click: async function () {
-          let n = await dialog.readline('Please input name', 'file name', true);
-          if (n) {
-            model.update_document(n.value, '');
-          }
-        }
-      }
-    },
-    {
-      text: 'Delete Node',
-      events: {
-        click: async function () {
-          //var target = e.target;
-          //if (target.nodeName !== 'TD') return;
-          //let name = target.parentElement.firstElementChild.innerText;
-          //check if there is a notes with this name, if yes, check if we need to process notes deletion.
-          if (model.is_notes(name)) {
-            let del = await dialog.confirm('Delete Notes Pacakge: ' + name, 'Yes,delete', 'No, Keep it');
-            if (del) {
-              model.delete_document(name);
-            }
-          } else {
-            model.delete_document(name);
-          }
-        }
-      }
-    },
-    {
-      text: 'Rename Node',
-      events: {
-        click: async function () {
-          let n = await dialog.readline('Rename ' + name + ' to:', 'target file name', true);
-          if (n) {
-            let new_name = n.value;
-            if (new_name === '') return;
-            model.rename_document(name, new_name);
-          }
-        }
-      }
-    },
-    {
-      type: contextmenu.ContextMenu.DIVIDER
-    }
-    /*,
-    {
-      text: 'Import Notes',
-      events: {
-        click: function (e) {
-          var target = e.target;
-          if (target.nodeName !== 'TD') return;
-          console.log(target.parentElement.firstElementChild.innerText);
-        }
-      }
-    },
-    {
-      text: 'Export Notes',
-      events: {
-        click: function (e) {
-          var target = e.target;
-          if (target.nodeName !== 'TD') return;
-          console.log(target.parentElement.firstElementChild.innerText);
-        }
-      }
-    }
-    */
-  ];
-
-  menu$1 = new contextmenu.ContextMenu(cmen$1);
-
-  eletb.addEventListener('contextmenu', function (e) {
-    menu$1.display(e);
-  });
-
-  model.on('DOCUMENT-UPDATE', () => {
-    build_data();
-    func_onSearch();
-  });
-
-  model.on('DOCUMENT-DELETE', () => {
-    build_data();
-    func_onSearch();
-  });
-
-  model.on('DOCUMENT-RENAME', () => {
-    build_data();
-    func_onSearch();
-  });
-
-  model.on('OPEN-NOTES', () => {
-    build_data();
-    func_onSearch();
-  });
-
-
-  var set_attr_1$2 = set_attr$2;
-
-  var explorer = {
-  	set_attr: set_attr_1$2
   };
 
   var codemirror = createCommonjsModule(function (module, exports) {
@@ -24627,7 +24102,7 @@ var diagram = (function () {
     gutters: [ 'CodeMirror-linenumbers', 'CodeMirror-foldgutter' ]
   });
 
-  var ele$1 = document.getElementById('src');
+  var ele$3 = document.getElementById('src');
 
   function document_changed() {
     var str, name;
@@ -24647,14 +24122,688 @@ var diagram = (function () {
     source.setValue(model.get_document_content(active));
   });
 
+  function set_attr$3(name, val) {
+    ele$3.style[name] = val;
+  }
+
+  var set_attr_1$3 = set_attr$3;
+
+  var editor = {
+  	set_attr: set_attr_1$3
+  };
+
+  var ele$2 = document.getElementById('dst');
+
+  let is_locked$1 = false;
+
+  //retrieve the top/left parameters of each node, rebuild yaml
+  function node_moved() {
+    //update model
+    var name = model.get_active_document();
+    var nodes = model.get_subnode_names(name);
+    if (nodes.length === 0) { //it's the node
+      let e = document.getElementById(name);
+      model.update_attr(name, 'left', e.style.left);
+      model.update_attr(name, 'top', e.style.top);
+      //source.setValue(m.get_document_content(name));
+      model.set_active_document(name);   //Trigger left pannel update
+    } else {
+      for (let n of nodes) {
+        let e = document.getElementById(n);
+        model.update_attr(n, 'left', e.style.left);
+        model.update_attr(n, 'top', e.style.top);
+      }
+    }
+  }
+
+  function node_selected(p) {
+    //console.log(p);
+    model.set_active_document(p.id);
+    //update_dropdown();
+    //dropdown.value = p.id;
+    //source.setValue(m.get_document_content(p.id));
+  }
+
+  function init$1() {
+    //it will be updated automatically. by the timer.
+    var canvas = document.getElementById('canvas');
+
+    jsPlumbBrowserUI.ready(function () {
+      window.j = jsPlumbBrowserUI.newInstance({
+        dragOptions: { cursor: 'pointer', zIndex: 2000 },
+        paintStyle: { stroke: '#666', strokeWidth:2 },
+        endpointHoverStyle: { fill: 'orange' },
+        hoverPaintStyle: { stroke: 'orange' },
+        endpointStyle: { width: 20, height: 16, stroke: '#666' },
+        endpoint: 'Rectangle',
+        anchors: [ 'TopCenter', 'TopCenter' ],
+        container: canvas,
+        dropOptions:{ activeClass:'dragActive', hoverClass:'dropHover' }
+      });
+
+      window.diagram_model = model;
+
+      //eslint-disable-next-line
+      window.j.bind(jsPlumbBrowserUI.EVENT_DRAG_STOP, (p) => { 
+        node_moved();
+      });
+
+      window.j.bind(jsPlumbBrowserUI.EVENT_ELEMENT_DBL_CLICK, (p) => {
+        node_selected(p);
+      });
+    });
+  }
+
+  var current_doc = '';
+
+  function get_current_doc() {
+    return current_doc;
+  }
+  model.on('ACTIVE-DOCUMENT', ({ active }) => {
+    if (window.j && !is_locked$1) {
+      window.j.reset();
+      node_1.add_node(model, active);
+      current_doc = active;
+    }
+  });
+
+  model.on('DOCUMENT-UPDATE', ({ impacted }) => {
+    if (window.j) {
+      if ((current_doc === impacted) && !is_locked$1) { //if not locked,update current doc
+        window.j.reset();
+        node_1.add_node(model, impacted);
+      }
+      if (model.get_subnode_names(current_doc).includes(impacted)) { //regardless locked or not update in case a subnode is impacted.
+        window.j.reset();
+        node_1.add_node(model, current_doc);
+      }
+    }
+  }
+  );
+
+  function set_attr$2(name, val) {
+    ele$2.style[name] = val;
+    //if hide canvas， make editor 100% width
+    if (name === 'display') {
+      if (val === 'none') {
+        editor.set_attr('width', '100%');
+      } else {
+        editor.set_attr('width', '500px');
+      }
+    }
+  }
+
+  function lock$1(status) {
+    is_locked$1 = status;
+  }
+  var set_attr_1$2 = set_attr$2;
+  var init_1 = init$1;
+  var lock_1$1 = lock$1;
+  var get_currect_doc = get_current_doc;
+
+  var canvas = {
+  	set_attr: set_attr_1$2,
+  	init: init_1,
+  	lock: lock_1$1,
+  	get_currect_doc: get_currect_doc
+  };
+
+  // https://github.com/m-thalmann/contextmenujs
+  function ContextMenu(menu, options) {
+    var self = this;
+    var num = ContextMenu.count++;
+
+    this.menu = menu;
+    this.contextTarget = null;
+
+    if (!(menu instanceof Array)) {
+      throw new Error('Parameter 1 must be of type Array');
+    }
+
+    if (typeof options !== 'undefined') {
+      if (typeof options !== 'object') {
+        throw new Error('Parameter 2 must be of type object');
+      }
+    } else {
+      options = {};
+    }
+
+    window.addEventListener('resize', function () {
+      if (ContextUtil.getProperty(options, 'close_on_resize', true)) {
+        self.hide();
+      }
+    });
+
+    this.setOptions = function (_options) {
+      if (typeof _options === 'object') {
+        options = _options;
+      } else {
+        throw new Error('Parameter 1 must be of type object');
+      }
+    };
+
+    this.changeOption = function (option, value) {
+      if (typeof option === 'string') {
+        if (typeof value !== 'undefined') {
+          options[option] = value;
+        } else {
+          throw new Error('Parameter 2 must be set');
+        }
+      } else {
+        throw new Error('Parameter 1 must be of type string');
+      }
+    };
+
+    this.getOptions = function () {
+      return options;
+    };
+
+    this.reload = function () {
+      if (document.getElementById('cm_' + num) == null) {
+        var cnt = document.createElement('div');
+        cnt.className = 'cm_container';
+        cnt.id = 'cm_' + num;
+
+        document.body.appendChild(cnt);
+      }
+
+      var container = document.getElementById('cm_' + num);
+      container.innerHTML = '';
+
+      container.appendChild(renderLevel(menu));
+    };
+
+    function renderLevel(level) {
+      var ul_outer = document.createElement('ul');
+
+      level.forEach(function (item) {
+        var li = document.createElement('li');
+        li.menu = self;
+
+        if (typeof item.type === 'undefined') {
+          var icon_span = document.createElement('span');
+          icon_span.className = 'cm_icon_span';
+
+          if (ContextUtil.getProperty(item, 'icon', '') != '') {
+            icon_span.innerHTML = ContextUtil.getProperty(item, 'icon', '');
+          } else {
+            icon_span.innerHTML = ContextUtil.getProperty(options, 'default_icon', '');
+          }
+
+          var text_span = document.createElement('span');
+          text_span.className = 'cm_text';
+
+          if (ContextUtil.getProperty(item, 'text', '') != '') {
+            text_span.innerHTML = ContextUtil.getProperty(item, 'text', '');
+          } else {
+            text_span.innerHTML = ContextUtil.getProperty(options, 'default_text', 'item');
+          }
+
+          var sub_span = document.createElement('span');
+          sub_span.className = 'cm_sub_span';
+
+          if (typeof item.sub !== 'undefined') {
+            if (ContextUtil.getProperty(options, 'sub_icon', '') != '') {
+              sub_span.innerHTML = ContextUtil.getProperty(options, 'sub_icon', '');
+            } else {
+              sub_span.innerHTML = '&#155;';
+            }
+          }
+
+          li.appendChild(icon_span);
+          li.appendChild(text_span);
+          li.appendChild(sub_span);
+
+          if (!ContextUtil.getProperty(item, 'enabled', true)) {
+            li.setAttribute('disabled', '');
+          } else {
+            if (typeof item.events === 'object') {
+              var keys = Object.keys(item.events);
+
+              for (var i = 0; i < keys.length; i++) {
+                li.addEventListener(keys[i], item.events[keys[i]]);
+              }
+            }
+
+            if (typeof item.sub !== 'undefined') {
+              li.appendChild(renderLevel(item.sub));
+            }
+          }
+        } else  if (item.type == ContextMenu.DIVIDER) {
+          li.className = 'cm_divider';
+        }
+
+        ul_outer.appendChild(li);
+      });
+
+      return ul_outer;
+    }
+
+    this.display = function (e, target) {
+      if (typeof target !== 'undefined') {
+        self.contextTarget = target;
+      } else {
+        self.contextTarget = e.target;
+      }
+
+      var menu = document.getElementById('cm_' + num);
+
+      var clickCoords = { x: e.clientX, y: e.clientY };
+      var clickCoordsX = clickCoords.x;
+      var clickCoordsY = clickCoords.y;
+
+      var menuWidth = menu.offsetWidth + 4;
+      var menuHeight = menu.offsetHeight + 4;
+
+      var windowWidth = window.innerWidth;
+      var windowHeight = window.innerHeight;
+
+      var mouseOffset = parseInt(ContextUtil.getProperty(options, 'mouse_offset', 2));
+
+      if ((windowWidth - clickCoordsX) < menuWidth) {
+        menu.style.left = windowWidth - menuWidth + 'px';
+      } else {
+        menu.style.left = (clickCoordsX + mouseOffset) + 'px';
+      }
+
+      if ((windowHeight - clickCoordsY) < menuHeight) {
+        menu.style.top = windowHeight - menuHeight + 'px';
+      } else {
+        menu.style.top = (clickCoordsY + mouseOffset) + 'px';
+      }
+
+      var sizes = ContextUtil.getSizes(menu);
+
+      if ((windowWidth - clickCoordsX) < sizes.width) {
+        menu.classList.add('cm_border_right');
+      } else {
+        menu.classList.remove('cm_border_right');
+      }
+
+      if ((windowHeight - clickCoordsY) < sizes.height) {
+        menu.classList.add('cm_border_bottom');
+      } else {
+        menu.classList.remove('cm_border_bottom');
+      }
+
+      menu.classList.add('display');
+
+      if (ContextUtil.getProperty(options, 'close_on_click', true)) {
+        window.addEventListener('click', documentClick);
+      }
+
+      e.preventDefault();
+    };
+
+    this.hide = function () {
+      document.getElementById('cm_' + num).classList.remove('display');
+      window.removeEventListener('click', documentClick);
+    };
+
+    function documentClick() {
+      self.hide();
+    }
+
+    this.reload();
+  }
+
+  ContextMenu.count = 0;
+  ContextMenu.DIVIDER = 'cm_divider';
+
+  const ContextUtil = {
+    getProperty: function (options, opt, def) {
+      if (typeof options[opt] !== 'undefined') {
+        return options[opt];
+      }
+      return def;
+
+    },
+
+    getSizes: function (obj) {
+      var lis = obj.getElementsByTagName('li');
+
+      var width_def = 0;
+      var height_def = 0;
+
+      for (var i = 0; i < lis.length; i++) {
+        var li = lis[i];
+
+        if (li.offsetWidth > width_def) {
+          width_def = li.offsetWidth;
+        }
+
+        if (li.offsetHeight > height_def) {
+          height_def = li.offsetHeight;
+        }
+      }
+
+      var width = width_def;
+      var height = height_def;
+
+      for (var i = 0; i < lis.length; i++) {
+        var li = lis[i];
+
+        var ul = li.getElementsByTagName('ul');
+        if (typeof ul[0] !== 'undefined') {
+          var ul_size = ContextUtil.getSizes(ul[0]);
+
+          if (width_def + ul_size.width > width) {
+            width = width_def + ul_size.width;
+          }
+
+          if (height_def + ul_size.height > height) {
+            height = height_def + ul_size.height;
+          }
+        }
+      }
+
+      return {
+        width: width,
+        height: height
+      };
+    }
+  };
+
+  var ContextMenu_1 = ContextMenu;
+
+  var contextmenu = {
+  	ContextMenu: ContextMenu_1
+  };
+
+  //const { Swal } = require("../../../library/sweetalert2.all.min");
+
+  function alert(msg) {
+    Swal.fire(msg);
+  }
+
+  /*
+  const { value: text } = await Swal.fire({
+    input: 'textarea',
+    inputLabel: 'Message',
+    inputPlaceholder: 'Type your message here...',
+    inputAttributes: {
+      'aria-label': 'Type your message here'
+    },
+    showCancelButton: true
+  })
+
+  if (text) {
+    Swal.fire(text)
+  }
+  */
+  async function readline(label, placeholder, showcancel) {
+    const text = await Swal.fire({
+      input: 'text',
+      inputLabel: label,
+      inputPlaceholder: placeholder,
+      inputAttributes: {
+        'aria-label': placeholder
+      },
+      showCancelButton: showcancel
+    });
+    return text;
+  }
+
+  async function confirm(label, yes, no) {
+    let n = await Swal.fire({
+      title: label,
+      showDenyButton: true,
+      //showCancelButton: true,
+      confirmButtonText: yes || 'Yes',
+      denyButtonText: no || 'No'
+    });
+    return (n.isConfirmed);
+  }
+
+  var alert_1 = alert;
+  var readline_1 = readline;
+  var confirm_1 = confirm;
+
+  var dialog = {
+  	alert: alert_1,
+  	readline: readline_1,
+  	confirm: confirm_1
+  };
+
+  var rows = [];
+  var search = document.getElementById('search');
+  var ele$1 = document.getElementById('explorer_container');
+
+
+
+  /* Fill array with data
+   * Fields:
+   * values *array* - value of each field (in case use of table)
+   * markup *string* - markup that will be added to the DOM
+   * active *bool* - specifies if row is suitable by search phrase
+  */
+
+  //get all the node names and notes
+
+  let notes_mode = false;
+
+  function build_data() {
+    rows = [];
+    var names = model.get_all_names();
+    if (notes_mode) {
+      names = model.get_all_notes_name();
+    } else {
+      names = model.get_all_names();
+    }
+    for (let k of Object.keys(names)) {
+      rows.push({
+        values: [ k, names[k] ],
+        markup: '<tr>' +
+                            '<td>' + k + '</td>' +
+                            '<td>' + names[k] + '</td>' +
+                          '</tr>',
+        active: true
+      });
+    }
+  }
+
+
+  /*
+    * Fetch suitable rows
+    */
+  function func_filterRows(rows) {
+    var results = [];
+    for (var i = 0, ii = rows.length; i < ii; i++) {
+      if (rows[i].active) results.push(rows[i].markup);
+    }
+    return results;
+  }
+
+  var filterRows = func_filterRows;
+  /*
+    * Init clusterize.js
+    */
+  var clusterize = new Clusterize({
+    rows: filterRows(rows),
+    scrollId: 'scrollArea',
+    contentId: 'contentArea'
+  });
+
+  /*
+    * Multi-column search
+    */
+  function func_onSearch() {
+    for (var i = 0, ii = rows.length; i < ii; i++) {
+      var suitable = false;
+      for (var j = 0, jj = rows[i].values.length; j < jj; j++) {
+        if (rows[i].values[j].toString().indexOf(search.value) + 1) { suitable = true; }
+      }
+      rows[i].active = suitable;
+    }
+    clusterize.update(filterRows(rows));
+  }
+
+  var onSearch = func_onSearch;
+
+  var eletb = document.getElementById('contentArea');
+
+  eletb.onclick = async function (e) {
+    var target = e.target;
+    if (target.nodeName !== 'TD') return;
+    let target_doc = target.parentElement.firstElementChild.innerText;
+    if (notes_mode) {
+      notes_mode = false;
+      model.reset(target_doc);
+    } else {
+      model.set_active_document(target_doc);
+    }
+  };
+
+  //ondblclick
+
+  var name = '';
+  eletb.oncontextmenu = function (e) {
+    var target = e.target;
+    if (target.nodeName !== 'TD') return;
+    name = target.parentElement.firstElementChild.innerText;
+    //console.log(target.parentElement.firstElementChild.innerText);
+  };
+
+  search.oninput = onSearch;
+
+
+  function show_notes() {
+    notes_mode = true;
+    build_data();
+    func_onSearch();
+  }
+
   function set_attr$1(name, val) {
     ele$1.style[name] = val;
   }
 
-  var set_attr_1$1 = set_attr$1;
+  var menu$1;
+  var cmen$1 = [
+    {
+      text: 'New',
+      events: {
+        click: async function () {
+          let n = await dialog.readline('Please input name', 'file name', true);
+          if (n) {
+            if (notes_mode) {
+              model.new_notes(n.value);
+            } else {
+              model.update_document(n.value, '');
+            }
+          }
+        }
+      }
+    },
+    {
+      text: 'Delete',
+      events: {
+        click: async function () {
+          if (notes_mode) {
+            let del = await dialog.confirm('Delete Notes Pacakge: ' + name, 'Yes,delete', 'No, Keep it');
+            if (del) {
+              model.delete_notes(name);
+            }
+          } else {
+            model.delete_document(name);
+          }
+        }
+      }
+    },
+    {
+      text: 'Rename',
+      events: {
+        click: async function () {
+          let n = await dialog.readline('Rename ' + name + ' to:', 'target file name', true);
+          if (n) {
+            let new_name = n.value;
+            if (new_name === '') return;
+            if (notes_mode) {
+              model.rename_notes(name, new_name);
+            } else {
+              model.rename_document(name, new_name);
+            }
+          }
+        }
+      }
+    },
+    {
+      text: 'Duplicate',
+      events: {
+        click: async function () {
+          let n = await dialog.readline('Duplicate ' + name + ' to:', 'target file name', true);
+          if (n) {
+            let new_name = n.value;
+            if (new_name === '') return;
+            if (notes_mode) {
+              model.duplicate_notes(name, new_name);
+            } else {
+              let c = model.get_document_content(name);
+              model.update_document(new_name, c);
+            }
+          }
+        }
+      }
+    },
+    {
+      type: contextmenu.ContextMenu.DIVIDER
+    }
+    /*,
+    {
+      text: 'Import Notes',
+      events: {
+        click: function (e) {
+          var target = e.target;
+          if (target.nodeName !== 'TD') return;
+          console.log(target.parentElement.firstElementChild.innerText);
+        }
+      }
+    },
+    {
+      text: 'Export Notes',
+      events: {
+        click: function (e) {
+          var target = e.target;
+          if (target.nodeName !== 'TD') return;
+          console.log(target.parentElement.firstElementChild.innerText);
+        }
+      }
+    }
+    */
+  ];
 
-  var editor = {
-  	set_attr: set_attr_1$1
+  menu$1 = new contextmenu.ContextMenu(cmen$1);
+
+  eletb.addEventListener('contextmenu', function (e) {
+    menu$1.display(e);
+  });
+
+  model.on('DOCUMENT-UPDATE', () => {
+    build_data();
+    func_onSearch();
+  });
+
+  model.on('DOCUMENT-DELETE', () => {
+    build_data();
+    func_onSearch();
+  });
+
+  model.on('DOCUMENT-RENAME', () => {
+    build_data();
+    func_onSearch();
+  });
+
+  model.on('OPEN-NOTES', () => {
+    build_data();
+    func_onSearch();
+  });
+
+
+  var set_attr_1$1 = set_attr$1;
+  var show_notes_1 = show_notes;
+
+  var explorer = {
+  	set_attr: set_attr_1$1,
+  	show_notes: show_notes_1
   };
 
   function open_document() {
@@ -24827,16 +24976,30 @@ var diagram = (function () {
     }
   }
 
+  var display = 'block';
+
   function set_attr(name, val) {
     ele.style[name] = val;
+    if (name === 'display') {  //ugly hack for auto hide outline if there is no subnodes.
+      display = val;
+    }
   }
+
 
   function update_buttons() {
     {
       clear_all_btn();
       let nodes = model.get_subnode_names(canvas.get_currect_doc());
-      for (let n of nodes) {
-        add_button$1(n, n, 'button-outline');
+      if (nodes.length === 0) {
+        //auto hide
+        //display = ele.style['display'];
+        //set_attr('display', 'none');
+        ele.style['display'] = 'none';
+      } else {
+        set_attr('display', display);
+        for (let n of nodes) {
+          add_button$1(n, n, 'button-outline');
+        }
       }
     }
   }
@@ -25018,8 +25181,8 @@ var diagram = (function () {
       commands_1.run(cmd.name, cmd.argv);
     }
   }
-  function exe_home() {
-    model.reset();
+  function exe_notes() {
+    explorer.show_notes();
   }
 
   function exe_index() {
@@ -25038,6 +25201,7 @@ var diagram = (function () {
     }
   }
 
+  /*
   function exe_show_lock(e, name, mod) {
     if (target_state[name] === 'lock') {
       mod.lock(false);
@@ -25049,6 +25213,7 @@ var diagram = (function () {
       target_state[name] = 'lock';
     }
   }
+  */
 
   function exe_show_hide_lock(e, name, mod) {
     if (target_state[name] === 'hide') {
@@ -25079,18 +25244,35 @@ var diagram = (function () {
     browse_history.pop();
   }
 
+  function exe_backup() {
+  }
+
+  function exe_restore() {
+  }
+
+  async function exe_share() {
+    await Swal.fire(
+      'Copy below URL to share',
+      window.location.href.replace(/#.*/, '#diag=' +  model.get_b64()),
+      'info'
+    );
+  }
+
   function add_tools() {
     //exe active node
     //add button
     //remove button
-    add_button('__SYSTEM_HOME', 'Lobby', exe_home, false);  //false means not a user button.
+    add_button('__SYSTEM_HOME', 'Notes', exe_notes, false);  //false means not a user button.
     add_button('__SYSTEM_EXPLORER', 'Explorer', function (e) { exe_show_hide(e, 'explorer', explorer); }, false);  //false means not a user button.
     add_button('__SYSTEM_EDITOR', 'Editor', function (e) { exe_show_hide(e, 'editor',  editor); }, false);  //false means not a user button.
-    add_button('__SYSTEM_CANVAS', 'Canvas', function (e) { exe_show_lock(e, 'canvas',  canvas); }, false);  //false means not a user button.
+    add_button('__SYSTEM_BACKUP', 'Backup', exe_backup, 'button-dark');  //false means not a user button.
+    add_button('__SYSTEM_RESTORE', 'Restore', exe_restore, 'button-dark');  //false means not a user button.
+    add_button('__SYSTEM_SHARE', 'Share', exe_share, 'button-system');  //false means not a user button.
+    add_button('__SYSTEM_BACKWARD', '<-', exe_backward, 'button-user');  //false means not a user button.
+    add_button('__SYSTEM_INDEX', 'Index', exe_index, 'button-user');  //false means not a user button.
+    add_button('__SYSTEM_FORWARD', '->', exe_forward, 'button-user');  //false means not a user button.
+    add_button('__SYSTEM_CANVAS', 'Canvas', function (e) { exe_show_hide_lock(e, 'canvas',  canvas); }, false);  //false means not a user button.
     add_button('__SYSTEM_OUTLINE', 'Outline', function (e) { exe_show_hide_lock(e, 'outline',  outline); }, false);  //false means not a user button.
-    add_button('__SYSTEM_BACKWARD', '<-', exe_backward, false);  //false means not a user button.
-    add_button('__SYSTEM_INDEX', 'Index', exe_index, false);  //false means not a user button.
-    add_button('__SYSTEM_FORWARD', '->', exe_forward, false);  //false means not a user button.
 
     //add_button('__SYSTEM_EXE', 'Execute', exe_cb, false);  //false means not a user button.
     //add_button('__SYSTEM_ADD', 'Add Button', add_cb, true);
@@ -25110,7 +25292,7 @@ var diagram = (function () {
   var menu;
   var cmen = [
     {
-      text: 'Add Current Node Button',
+      text: 'Add Current Node to Bookmark',
       events: {
         click: function () {
           //var target = e.target;
@@ -25120,7 +25302,7 @@ var diagram = (function () {
       }
     },
     {
-      text: 'Remove Button',
+      text: 'Remove from Bookmark',
       events: {
         click: function () {
           //var target = e.target;
